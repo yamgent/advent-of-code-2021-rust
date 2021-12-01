@@ -1,59 +1,40 @@
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
-struct AccumulatorP1 {
-    prev_value: Option<i32>,
-    count: i32,
-}
-
-fn p1(input: &str) -> String {
+fn parse_numbers(input: &str) -> Vec<i32> {
     input
         .trim()
         .lines()
-        .map(|x| x.parse::<i32>().unwrap())
-        .fold(
-            AccumulatorP1 {
-                prev_value: None,
-                count: 0,
-            },
-            |acc, current_value| AccumulatorP1 {
-                prev_value: Some(current_value),
-                count: match acc.prev_value {
-                    None => 0,
-                    Some(prev_value) => {
-                        if let std::cmp::Ordering::Greater = current_value.cmp(&prev_value) {
-                            acc.count + 1
-                        } else {
-                            acc.count
-                        }
-                    }
-                },
-            },
-        )
-        .count
-        .to_string()
+        .map(str::parse::<i32>)
+        .map(Result::unwrap)
+        .collect::<Vec<_>>()
 }
 
-fn p2(input: &str) -> String {
-    let numbers = input
-        .trim()
-        .lines()
-        .map(|x| x.parse::<i32>().unwrap())
-        .collect::<Vec<_>>();
-    let mut window_sum = vec![];
-
-    for i in 0..numbers.len() - 2 {
-        window_sum.push(numbers[i] + numbers[i + 1] + numbers[i + 2]);
-    }
-
+fn count_increments(numbers: &[i32]) -> i32 {
     let mut count = 0;
 
-    for i in 0..window_sum.len() - 1 {
-        if let std::cmp::Ordering::Greater = window_sum[i + 1].cmp(&window_sum[i]) {
+    for i in 0..numbers.len() - 1 {
+        if numbers[i + 1] > numbers[i] {
             count += 1;
         }
     }
 
-    count.to_string()
+    count
+}
+
+fn p1(input: &str) -> String {
+    let numbers = parse_numbers(input);
+    count_increments(&numbers).to_string()
+}
+
+fn p2(input: &str) -> String {
+    let numbers = parse_numbers(input);
+
+    let mut window_sum = vec![];
+    for i in 0..numbers.len() - 2 {
+        window_sum.push(numbers[i] + numbers[i + 1] + numbers[i + 2]);
+    }
+
+    count_increments(&window_sum).to_string()
 }
 
 fn main() {
