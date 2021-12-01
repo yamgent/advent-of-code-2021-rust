@@ -6,14 +6,14 @@ fn parse_numbers(input: &str) -> Vec<i32> {
         .lines()
         .map(str::parse::<i32>)
         .map(Result::unwrap)
-        .collect::<Vec<_>>()
+        .collect()
 }
 
 fn p1(input: &str) -> String {
     let numbers = parse_numbers(input);
     numbers
         .iter()
-        .zip(numbers[1..].iter())
+        .zip(numbers.iter().skip(1))
         .filter(|(x, y)| y > x)
         .count()
         .to_string()
@@ -23,7 +23,7 @@ fn p2(input: &str) -> String {
     let numbers = parse_numbers(input);
     numbers
         .iter()
-        .zip(numbers[3..].iter())
+        .zip(numbers.iter().skip(3))
         .filter(|(x, y)| y > x)
         .count()
         .to_string()
