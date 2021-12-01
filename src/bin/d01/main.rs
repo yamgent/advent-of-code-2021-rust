@@ -9,26 +9,24 @@ fn parse_numbers(input: &str) -> Vec<i32> {
         .collect::<Vec<_>>()
 }
 
-fn count_increments(numbers: &[i32], next_index_delta: usize) -> i32 {
-    let mut count = 0;
-
-    for i in 0..numbers.len() - next_index_delta {
-        if numbers[i + next_index_delta] > numbers[i] {
-            count += 1;
-        }
-    }
-
-    count
-}
-
 fn p1(input: &str) -> String {
     let numbers = parse_numbers(input);
-    count_increments(&numbers, 1).to_string()
+    numbers
+        .iter()
+        .zip(numbers[1..].iter())
+        .filter(|(x, y)| y > x)
+        .count()
+        .to_string()
 }
 
 fn p2(input: &str) -> String {
     let numbers = parse_numbers(input);
-    count_increments(&numbers, 3).to_string()
+    numbers
+        .iter()
+        .zip(numbers[3..].iter())
+        .filter(|(x, y)| y > x)
+        .count()
+        .to_string()
 }
 
 fn main() {
