@@ -38,70 +38,57 @@ enum BitCriteriaType {
     CO2,
 }
 
-fn filter_by_bit_criteria(
-    list: Vec<&str>,
-    pos: usize,
-    criteria_type: BitCriteriaType,
-) -> Vec<&str> {
-    let chars = list
-        .iter()
-        .map(|line| line.chars().nth(pos).unwrap())
-        .collect::<Vec<_>>();
-    let zeroes = chars.iter().filter(|char| **char == '0').count();
-    let ones = list.len() - zeroes;
+fn extract_by_bit_criteria(mut matrix: Vec<Vec<i32>>, criteria_type: BitCriteriaType) -> u32 {
+    let total_bits = matrix[0].len();
 
-    let filt = match criteria_type {
-        BitCriteriaType::Oxygen => {
-            if ones >= zeroes {
-                '1'
-            } else {
-                '0'
+    for i in 0..total_bits {
+        let ones = matrix.iter().map(|line| line[i]).sum::<i32>();
+        let zeroes = matrix.len() as i32 - ones;
+        let selected = match criteria_type {
+            BitCriteriaType::Oxygen => {
+                if ones >= zeroes {
+                    1
+                } else {
+                    0
+                }
             }
-        }
-        BitCriteriaType::CO2 => {
-            if zeroes <= ones {
-                '0'
-            } else {
-                '1'
+            BitCriteriaType::CO2 => {
+                if zeroes <= ones {
+                    0
+                } else {
+                    1
+                }
             }
-        }
-    };
+        };
 
-    list.iter()
-        .filter(|line| line.chars().nth(pos).unwrap() == filt)
-        .copied()
-        .collect::<Vec<_>>()
+        matrix.retain(|x| x[i] == selected);
+
+        if matrix.len() == 1 {
+            break;
+        }
+    }
+
+    u32::from_str_radix(
+        &matrix[0].iter().map(|x| x.to_string()).collect::<String>(),
+        2,
+    )
+    .unwrap()
 }
 
 fn p2(input: &str) -> String {
-    let lines = input.trim().lines().collect::<Vec<_>>();
+    let lines = input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|c| if c == '0' { 0 } else { 1 })
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
 
-    let oxy = (0..lines[0].len())
-        .into_iter()
-        .fold(lines.clone(), |acc, i| {
-            if acc.len() == 1 {
-                acc
-            } else {
-                filter_by_bit_criteria(acc, i, BitCriteriaType::Oxygen)
-            }
-        })[0]
-        .to_string();
-
-    let co2 = (0..lines[0].len())
-        .into_iter()
-        .fold(lines.clone(), |acc, i| {
-            if acc.len() == 1 {
-                acc
-            } else {
-                filter_by_bit_criteria(acc, i, BitCriteriaType::CO2)
-            }
-        })[0]
-        .to_string();
-
-    let oxy = u32::from_str_radix(&oxy, 2).unwrap();
-    let co2 = u32::from_str_radix(&co2, 2).unwrap();
-
-    (oxy * co2).to_string()
+    let oxygen = extract_by_bit_criteria(lines.clone(), BitCriteriaType::Oxygen);
+    let co2 = extract_by_bit_criteria(lines, BitCriteriaType::CO2);
+    (oxygen * co2).to_string()
 }
 
 fn main() {
