@@ -1,7 +1,7 @@
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
-fn p1(input: &str) -> String {
-    let lines = input
+fn get_matrix_from_input(input: &str) -> Vec<Vec<i32>> {
+    input
         .trim()
         .lines()
         .map(|line| {
@@ -9,18 +9,21 @@ fn p1(input: &str) -> String {
                 .map(|c| if c == '0' { 0 } else { 1 })
                 .collect::<Vec<_>>()
         })
-        .collect::<Vec<_>>();
-    let total_bits = lines[0].len();
+        .collect::<Vec<_>>()
+}
+
+fn p1(input: &str) -> String {
+    let matrix = get_matrix_from_input(input);
+    let total_bits = matrix[0].len();
+    let total_lines = matrix.len() as i32;
 
     let counters = (0..total_bits)
-        .map(|i| lines.iter().map(|line| line[i]).sum())
-        .collect::<Vec<u32>>();
-
-    let half_way_point = (lines.len() / 2) as u32;
+        .map(|i| matrix.iter().map(|line| line[i]).sum::<i32>())
+        .collect::<Vec<_>>();
 
     let gamma_rate = counters
         .iter()
-        .map(|x| if *x > half_way_point { '1' } else { '0' })
+        .map(|x| if *x > total_lines / 2 { '1' } else { '0' })
         .collect::<String>();
     let epsilon_rate = gamma_rate
         .chars()
@@ -38,7 +41,7 @@ enum BitCriteriaType {
     CO2,
 }
 
-fn extract_by_bit_criteria(mut matrix: Vec<Vec<i32>>, criteria_type: BitCriteriaType) -> u32 {
+fn find_entry_by_bit_criteria(mut matrix: Vec<Vec<i32>>, criteria_type: BitCriteriaType) -> u32 {
     let total_bits = matrix[0].len();
 
     for i in 0..total_bits {
@@ -76,18 +79,9 @@ fn extract_by_bit_criteria(mut matrix: Vec<Vec<i32>>, criteria_type: BitCriteria
 }
 
 fn p2(input: &str) -> String {
-    let lines = input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| if c == '0' { 0 } else { 1 })
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-
-    let oxygen = extract_by_bit_criteria(lines.clone(), BitCriteriaType::Oxygen);
-    let co2 = extract_by_bit_criteria(lines, BitCriteriaType::CO2);
+    let matrix = get_matrix_from_input(input);
+    let oxygen = find_entry_by_bit_criteria(matrix.clone(), BitCriteriaType::Oxygen);
+    let co2 = find_entry_by_bit_criteria(matrix, BitCriteriaType::CO2);
     (oxygen * co2).to_string()
 }
 
