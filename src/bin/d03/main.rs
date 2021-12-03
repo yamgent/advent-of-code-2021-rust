@@ -1,21 +1,22 @@
-use std::iter;
-
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
 fn p1(input: &str) -> String {
-    let lines = input.trim().lines().collect::<Vec<_>>();
-
-    let mut counters = iter::repeat(0).take(lines[0].len()).collect::<Vec<_>>();
-
-    lines.iter().for_each(|line| {
-        line.chars().enumerate().for_each(|(i, c)| {
-            if c == '1' {
-                counters[i] += 1
-            }
+    let lines = input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|c| if c == '0' { 0 } else { 1 })
+                .collect::<Vec<_>>()
         })
-    });
+        .collect::<Vec<_>>();
+    let total_bits = lines[0].len();
 
-    let half_way_point = lines.len() / 2;
+    let counters = (0..total_bits)
+        .map(|i| lines.iter().map(|line| line[i]).sum())
+        .collect::<Vec<u32>>();
+
+    let half_way_point = (lines.len() / 2) as u32;
 
     let gamma_rate = counters
         .iter()
@@ -51,7 +52,7 @@ fn filter_by_bit_criteria(
 
     let filt = match criteria_type {
         BitCriteriaType::Oxygen => {
-            if zeroes <= ones {
+            if ones >= zeroes {
                 '1'
             } else {
                 '0'
