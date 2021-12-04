@@ -140,8 +140,7 @@ fn p1(input: &str) -> String {
     let result = input
         .boards
         .into_iter()
-        .map(|board| board.get_win_state(&input.called_numbers))
-        .flatten()
+        .flat_map(|board| board.get_win_state(&input.called_numbers))
         .min_by(|x, y| x.called_index.cmp(&y.called_index))
         .expect("Cannot find a winning board");
 
@@ -154,8 +153,7 @@ fn p2(input: &str) -> String {
     let result = input
         .boards
         .into_iter()
-        .map(|board| board.get_win_state(&input.called_numbers))
-        .flatten()
+        .flat_map(|board| board.get_win_state(&input.called_numbers))
         .max_by(|x, y| x.called_index.cmp(&y.called_index))
         .expect("Cannot find a last losing board");
 
