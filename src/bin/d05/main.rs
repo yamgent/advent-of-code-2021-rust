@@ -13,9 +13,9 @@ impl Line {
         let (start, end) = line.split_once(" -> ").unwrap();
 
         fn parse_coord_from_part(part: &str) -> (i32, i32) {
-            let mut parts = part.split(',');
-            let x = parts.next().unwrap().parse().unwrap();
-            let y = parts.next().unwrap().parse().unwrap();
+            let mut components = part.split(',');
+            let x = components.next().unwrap().parse().unwrap();
+            let y = components.next().unwrap().parse().unwrap();
             (x, y)
         }
 
@@ -30,26 +30,22 @@ impl Line {
     }
 
     fn iter(&self) -> LineIterator {
-        let direction = {
-            let x_delta = self.end.0 - self.start.0;
-            let y_delta = self.end.1 - self.start.1;
-            (
-                if x_delta == 0 {
-                    0
-                } else {
-                    x_delta / x_delta.abs()
-                },
-                if y_delta == 0 {
-                    0
-                } else {
-                    y_delta / y_delta.abs()
-                },
-            )
-        };
+        fn calculate_normalized_direction(start: i32, end: i32) -> i32 {
+            if start == end {
+                0
+            } else {
+                let delta = end - start;
+                delta / delta.abs()
+            }
+        }
+
+        let direction = (
+            calculate_normalized_direction(self.start.0, self.end.0),
+            calculate_normalized_direction(self.start.1, self.end.1),
+        );
 
         LineIterator {
-            start_produced: false,
-            current: self.start,
+            current: (self.start.0 - direction.0, self.start.1 - direction.1),
             end: self.end,
             direction,
         }
@@ -57,7 +53,6 @@ impl Line {
 }
 
 struct LineIterator {
-    start_produced: bool,
     current: (i32, i32),
     end: (i32, i32),
     direction: (i32, i32),
@@ -67,10 +62,7 @@ impl Iterator for LineIterator {
     type Item = (i32, i32);
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.start_produced {
-            self.start_produced = true;
-            Some(self.current)
-        } else if self.current != self.end {
+        if self.current != self.end {
             self.current.0 += self.direction.0;
             self.current.1 += self.direction.1;
             Some(self.current)
@@ -80,21 +72,18 @@ impl Iterator for LineIterator {
     }
 }
 
-fn p1(input: &str) -> String {
-    let mut visited = HashMap::new();
-
+fn solve(input: &str, include_diagonals: bool) -> String {
     input
         .trim()
         .lines()
         .map(Line::parse_from_line)
-        .filter(Line::is_horizontal_or_vertical)
-        .for_each(|line| {
-            line.iter().for_each(|coord| {
+        .filter(|line| include_diagonals || line.is_horizontal_or_vertical())
+        .fold(&mut HashMap::new(), |visited, current_line| {
+            current_line.iter().for_each(|coord| {
                 *visited.entry(coord).or_insert(0) += 1;
-            })
-        });
-
-    visited
+            });
+            visited
+        })
         .values()
         .into_iter()
         .filter(|x| **x > 1)
@@ -102,25 +91,12 @@ fn p1(input: &str) -> String {
         .to_string()
 }
 
+fn p1(input: &str) -> String {
+    solve(input, false)
+}
+
 fn p2(input: &str) -> String {
-    let mut visited = HashMap::new();
-
-    input
-        .trim()
-        .lines()
-        .map(Line::parse_from_line)
-        .for_each(|line| {
-            line.iter().for_each(|coord| {
-                *visited.entry(coord).or_insert(0) += 1;
-            })
-        });
-
-    visited
-        .values()
-        .into_iter()
-        .filter(|x| **x > 1)
-        .count()
-        .to_string()
+    solve(input, true)
 }
 
 fn main() {
