@@ -2,43 +2,53 @@ use std::{collections::HashMap, iter};
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
 fn p1(input: &str) -> String {
-    let mut fishes = input
+    let mut fishes_days_left = input
         .trim()
         .split(',')
         .flat_map(str::parse::<i32>)
         .collect::<Vec<_>>();
 
     (0..80).for_each(|_| {
-        let mut new_fishes = 0;
-        fishes.iter_mut().for_each(|fish| {
-            if *fish == 0 {
-                *fish = 6;
-                new_fishes += 1;
+        let mut new_fishes_count = 0;
+        fishes_days_left.iter_mut().for_each(|fish_days_left| {
+            if *fish_days_left == 0 {
+                *fish_days_left = 6;
+                new_fishes_count += 1;
             } else {
-                *fish -= 1;
+                *fish_days_left -= 1;
             }
         });
-        fishes.append(&mut iter::repeat(8).take(new_fishes).collect::<Vec<i32>>());
+        fishes_days_left.append(&mut iter::repeat(8).take(new_fishes_count).collect::<Vec<i32>>());
     });
 
-    fishes.len().to_string()
+    fishes_days_left.len().to_string()
 }
 
-fn solve_efficient(input: &str, days: i64) -> String {
-    let mut dp_store: HashMap<i64, i64> = HashMap::new();
-    fn dp(days_left: i64, dp_store: &mut HashMap<i64, i64>) -> i64 {
-        match dp_store.get(&days_left) {
-            Some(value) => *value,
+fn solve_efficient(input: &str, total_days: i64) -> String {
+    // using dynamic programming for "compute()"
+    let mut compute_cache: HashMap<i64, i64> = HashMap::new();
+
+    // compute how many fishes the current fish and its children, grandchildren,
+    // etc can produce, plus it will also count itself in the final output
+    //
+    // we assume that the fish starts at the beginning of the 6-cycle
+    // on the first day (if it isn't, callers must compensate by modifying
+    // days_left accordingly)
+    fn compute(compute_cache: &mut HashMap<i64, i64>, days_left: i64) -> i64 {
+        match compute_cache.get(&days_left) {
+            Some(&value) => value,
             None => {
                 let answer = if days_left < 7 {
                     1
                 } else {
                     (0..(days_left / 7))
-                        .map(|i| dp(days_left - ((i + 1) * 7) - 2, dp_store))
+                        // -2 to account for the fact that new fishes have a longer cycle of 9,
+                        // for the first birth, so they lose two days
+                        .map(|i| compute(compute_cache, days_left - ((i + 1) * 7) - 2))
                         .sum::<i64>()
                         + 1
                 };
-                dp_store.insert(days_left, answer);
+                compute_cache.insert(days_left, answer);
                 answer
             }
         }
@@ -48,8 +58,16 @@ fn solve_efficient(input: &str, days: i64) -> String {
         .trim()
         .split(',')
         .flat_map(str::parse::<i64>)
-        .map(|x| days + (7 - x - 1))
-        .map(|x| dp(x, &mut dp_store))
+        .map(|fish_days_left| {
+            // our algorithm assumes that in the initial day, everyone
+            // is at the start of the cycle (in initial fishes, that is 6).
+            // If the current fish isn't so, we lengthen
+            // their total days, so that it is as if they started as '6'
+            // [hence the (7 - fish_days_left - 1) part], so that
+            // their "headstart" is accounted for
+            total_days + (7 - fish_days_left - 1)
+        })
+        .map(|fish_days_left| compute(&mut compute_cache, fish_days_left))
         .sum::<i64>()
         .to_string()
 }
