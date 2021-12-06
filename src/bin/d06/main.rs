@@ -24,7 +24,7 @@ fn p1(input: &str) -> String {
     fishes_days_left.len().to_string()
 }
 
-fn solve_efficient(input: &str, total_days: i64) -> String {
+fn solve_efficient_topdown(input: &str, total_days: i64) -> String {
     // using dynamic programming for "compute()"
     let mut compute_cache: HashMap<i64, i64> = HashMap::new();
 
@@ -72,8 +72,40 @@ fn solve_efficient(input: &str, total_days: i64) -> String {
         .to_string()
 }
 
+// same as the solve_efficient_topdown() version, except
+// that the "compute()" (now called answers) is bottom up (i.e. in reverse)
+fn solve_efficient_bottomup(input: &str, total_days: i64) -> String {
+    let mut answers = HashMap::new();
+
+    (7..(total_days + 7)).for_each(|days_left| {
+        answers.insert(
+            days_left,
+            (0..(days_left / 7))
+                .map(|i| {
+                    let child_days_left = days_left - ((i + 1) * 7) - 2;
+                    if child_days_left < 7 {
+                        1
+                    } else {
+                        *answers.get(&child_days_left).unwrap()
+                    }
+                })
+                .sum::<i64>()
+                + 1,
+        );
+    });
+
+    input
+        .trim()
+        .split(',')
+        .flat_map(str::parse::<i64>)
+        .map(|fish_days_left| total_days + (7 - fish_days_left - 1))
+        .map(|fish_days_left| answers.get(&fish_days_left).unwrap())
+        .sum::<i64>()
+        .to_string()
+}
+
 fn p2(input: &str) -> String {
-    solve_efficient(input, 256)
+    solve_efficient_bottomup(input, 256)
 }
 
 fn main() {
@@ -100,7 +132,8 @@ mod tests {
     #[test]
     fn test_p2_sample() {
         // p1 is inefficient version with 80 days
-        assert_eq!(solve_efficient(SAMPLE_INPUT, 80), p1(SAMPLE_INPUT));
+        assert_eq!(solve_efficient_topdown(SAMPLE_INPUT, 80), p1(SAMPLE_INPUT));
+        assert_eq!(solve_efficient_bottomup(SAMPLE_INPUT, 80), p1(SAMPLE_INPUT));
 
         assert_eq!(p2(SAMPLE_INPUT), "26984457539");
     }
@@ -108,7 +141,8 @@ mod tests {
     #[test]
     fn test_p2_actual() {
         // p1 is inefficient version with 80 days
-        assert_eq!(solve_efficient(ACTUAL_INPUT, 80), p1(ACTUAL_INPUT));
+        assert_eq!(solve_efficient_topdown(ACTUAL_INPUT, 80), p1(ACTUAL_INPUT));
+        assert_eq!(solve_efficient_bottomup(ACTUAL_INPUT, 80), p1(ACTUAL_INPUT));
 
         assert_eq!(p2(ACTUAL_INPUT), "1686252324092");
     }
