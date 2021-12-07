@@ -5,7 +5,8 @@ fn p1(input: &str) -> String {
     let mut fishes_days_left = input
         .trim()
         .split(',')
-        .flat_map(str::parse::<i32>)
+        .map(str::parse::<i32>)
+        .map(Result::unwrap)
         .collect::<Vec<_>>();
 
     (0..80).for_each(|_| {
@@ -57,7 +58,8 @@ fn solve_efficient_topdown(input: &str, total_days: i64) -> String {
     input
         .trim()
         .split(',')
-        .flat_map(str::parse::<i64>)
+        .map(str::parse::<i64>)
+        .map(Result::unwrap)
         .map(|fish_days_left| {
             // our algorithm assumes that in the initial day, everyone
             // is at the start of the cycle (in initial fishes, that is 6).
@@ -97,7 +99,8 @@ fn solve_efficient_bottomup(input: &str, total_days: i64) -> String {
     input
         .trim()
         .split(',')
-        .flat_map(str::parse::<i64>)
+        .map(str::parse::<i64>)
+        .map(Result::unwrap)
         .map(|fish_days_left| total_days + (7 - fish_days_left - 1))
         .map(|fish_days_left| answers.get(&fish_days_left).unwrap())
         .sum::<i64>()
