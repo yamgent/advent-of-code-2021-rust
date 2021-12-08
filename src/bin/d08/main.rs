@@ -54,40 +54,40 @@ impl GoodBadMapping {
     }
 
     fn get_pattern_to_digit(&self, unique_patterns: Vec<Vec<char>>) -> HashMap<String, i32> {
-        unique_patterns
-            .into_iter()
-            .fold(&mut HashMap::new(), |acc, pattern| {
-                let mut good_segments = pattern
-                    .iter()
-                    .map(|&bad_segment| self.get_good(bad_segment))
-                    .collect::<Vec<_>>();
+        let mut result = HashMap::new();
 
-                good_segments.sort_unstable();
+        unique_patterns.into_iter().for_each(|pattern| {
+            let mut good_segments = pattern
+                .iter()
+                .map(|&bad_segment| self.get_good(bad_segment))
+                .collect::<Vec<_>>();
 
-                let good_segments = good_segments.iter().collect::<String>();
+            good_segments.sort_unstable();
 
-                let val = match good_segments.as_str() {
-                    "abcefg" => 0,
-                    "cf" => 1,
-                    "acdeg" => 2,
-                    "acdfg" => 3,
-                    "bcdf" => 4,
-                    "abdfg" => 5,
-                    "abdefg" => 6,
-                    "acf" => 7,
-                    "abcdefg" => 8,
-                    "abcdfg" => 9,
-                    _ => panic!(
-                        "Cannot find digit for good {}, bad {}",
-                        good_segments,
-                        pattern.iter().collect::<String>()
-                    ),
-                };
+            let good_segments = good_segments.iter().collect::<String>();
 
-                acc.insert(pattern.iter().collect::<String>(), val);
-                acc
-            })
-            .to_owned()
+            let val = match good_segments.as_str() {
+                "abcefg" => 0,
+                "cf" => 1,
+                "acdeg" => 2,
+                "acdfg" => 3,
+                "bcdf" => 4,
+                "abdfg" => 5,
+                "abdefg" => 6,
+                "acf" => 7,
+                "abcdefg" => 8,
+                "abcdfg" => 9,
+                _ => panic!(
+                    "Cannot find digit for good {}, bad {}",
+                    good_segments,
+                    pattern.iter().collect::<String>()
+                ),
+            };
+
+            result.insert(pattern.iter().collect::<String>(), val);
+        });
+
+        result
     }
 }
 
