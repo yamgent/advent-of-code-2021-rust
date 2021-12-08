@@ -119,8 +119,7 @@ fn p2(input: &str) -> String {
                 .iter()
                 .fold(&mut HashMap::new(), |acc, pattern| {
                     pattern.iter().for_each(|&bad_segment| {
-                        let counter = acc.entry(bad_segment).or_insert(0);
-                        *counter += 1;
+                        *acc.entry(bad_segment).or_insert(0) += 1;
                     });
                     acc
                 })
