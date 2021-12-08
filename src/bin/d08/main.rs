@@ -19,12 +19,12 @@ fn p1(input: &str) -> String {
         .to_string()
 }
 
-struct SegmentMapping {
+struct GoodBadMapping {
     good_to_bad: HashMap<char, char>,
     bad_to_good: HashMap<char, char>,
 }
 
-impl SegmentMapping {
+impl GoodBadMapping {
     fn new() -> Self {
         Self {
             good_to_bad: HashMap::new(),
@@ -48,6 +48,47 @@ impl SegmentMapping {
     fn has_bad(&self, bad: char) -> bool {
         self.bad_to_good.contains_key(&bad)
     }
+
+    fn get_good(&self, bad: char) -> char {
+        *self.bad_to_good.get(&bad).unwrap()
+    }
+
+    fn get_pattern_to_digit(&self, unique_patterns: Vec<Vec<char>>) -> HashMap<String, i32> {
+        unique_patterns
+            .into_iter()
+            .fold(&mut HashMap::new(), |acc, pattern| {
+                let mut good_segments = pattern
+                    .iter()
+                    .map(|&bad_segment| self.get_good(bad_segment))
+                    .collect::<Vec<_>>();
+
+                good_segments.sort_unstable();
+
+                let good_segments = good_segments.iter().collect::<String>();
+
+                let val = match good_segments.as_str() {
+                    "abcefg" => 0,
+                    "cf" => 1,
+                    "acdeg" => 2,
+                    "acdfg" => 3,
+                    "bcdf" => 4,
+                    "abdfg" => 5,
+                    "abdefg" => 6,
+                    "acf" => 7,
+                    "abcdefg" => 8,
+                    "abcdfg" => 9,
+                    _ => panic!(
+                        "Cannot find digit for good {}, bad {}",
+                        good_segments,
+                        pattern.iter().collect::<String>()
+                    ),
+                };
+
+                acc.insert(pattern.iter().collect::<String>(), val);
+                acc
+            })
+            .to_owned()
+    }
 }
 
 fn p2(input: &str) -> String {
@@ -55,137 +96,83 @@ fn p2(input: &str) -> String {
         .trim()
         .lines()
         .map(|line| {
-            let mut parts = line
-                .split('|')
-                .map(|part| part.trim().split(' ').collect::<Vec<_>>());
-            let unique_patterns = parts
-                .next()
-                .unwrap()
-                .into_iter()
-                .map(|x| {
-                    let mut x = x.chars().collect::<Vec<_>>();
-                    x.sort_unstable();
-                    x.iter().collect::<String>()
-                })
-                .collect::<Vec<_>>();
-            let outputs = parts.next().unwrap().into_iter().map(|x| {
-                let mut x = x.chars().collect::<Vec<_>>();
-                x.sort_unstable();
-                x.iter().collect::<String>()
+            let mut parts = line.split('|').map(|part| {
+                part.trim()
+                    .split(' ')
+                    .map(|pattern| {
+                        let mut pattern = pattern.chars().collect::<Vec<_>>();
+                        pattern.sort_unstable();
+                        pattern
+                    })
+                    .collect::<Vec<_>>()
             });
 
+            let unique_patterns = parts.next().unwrap();
+            let outputs = parts.next().unwrap();
             if parts.next().is_some() {
-                panic!("Residue parts after splitting |");
+                panic!("Residue parts found after splitting by |");
             }
 
-            let mut segment_mapping = SegmentMapping::new();
+            let mut good_bad_mapping = GoodBadMapping::new();
 
-            let faulty_segment_counts = unique_patterns
+            unique_patterns
                 .iter()
                 .fold(&mut HashMap::new(), |acc, pattern| {
-                    pattern.chars().for_each(|c| {
-                        let new_count = match acc.get(&c) {
-                            Some(&count) => count + 1,
-                            None => 1,
-                        };
-                        acc.insert(c, new_count);
+                    pattern.iter().for_each(|&bad_segment| {
+                        let counter = acc.entry(bad_segment).or_insert(0);
+                        *counter += 1;
                     });
                     acc
                 })
-                .to_owned();
-
-            faulty_segment_counts
                 .iter()
-                .for_each(|(&faulty_segment, &count)| match count {
+                .for_each(|(&bad_segment, &count)| match count {
                     6 => {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'b');
+                        good_bad_mapping.add_bad_to_good(bad_segment, 'b');
                     }
                     4 => {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'e');
+                        good_bad_mapping.add_bad_to_good(bad_segment, 'e');
                     }
                     9 => {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'f');
+                        good_bad_mapping.add_bad_to_good(bad_segment, 'f');
                     }
-                    _ => (),
+                    _ => (), // cannot determine
                 });
 
-            unique_patterns
-                .iter()
-                .find(|pattern| pattern.len() == 2)
-                .unwrap()
-                .chars()
-                .for_each(|faulty_segment| {
-                    if !segment_mapping.has_bad(faulty_segment) {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'c');
-                    }
-                });
+            fn assign_unique_unresolved_bad_segment(
+                unique_patterns: &[Vec<char>],
+                good_bad_mapping: &mut GoodBadMapping,
+                pattern_length: usize,
+                good_segment: char,
+            ) {
+                let unresolved = unique_patterns
+                    .iter()
+                    .find(|pattern| pattern.len() == pattern_length)
+                    .unwrap()
+                    .iter()
+                    .filter(|&&bad_segment| !good_bad_mapping.has_bad(bad_segment))
+                    .collect::<Vec<_>>();
 
-            unique_patterns
-                .iter()
-                .find(|pattern| pattern.len() == 3)
-                .unwrap()
-                .chars()
-                .for_each(|faulty_segment| {
-                    if !segment_mapping.has_bad(faulty_segment) {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'a');
-                    }
-                });
-            unique_patterns
-                .iter()
-                .find(|pattern| pattern.len() == 4)
-                .unwrap()
-                .chars()
-                .for_each(|faulty_segment| {
-                    if !segment_mapping.has_bad(faulty_segment) {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'd');
-                    }
-                });
-            unique_patterns
-                .iter()
-                .find(|pattern| pattern.len() == 5)
-                .unwrap()
-                .chars()
-                .for_each(|faulty_segment| {
-                    if !segment_mapping.has_bad(faulty_segment) {
-                        segment_mapping.add_bad_to_good(faulty_segment, 'g');
-                    }
-                });
+                if unresolved.len() != 1 {
+                    panic!("There are {} unresolved segments", unresolved.len());
+                }
 
-            let bad_segments_to_digit = unique_patterns
-                .into_iter()
-                .fold(&mut HashMap::new(), |acc, pattern| {
-                    let mut good_segments = pattern
-                        .chars()
-                        .map(|faulty_segment| {
-                            *segment_mapping.bad_to_good.get(&faulty_segment).unwrap()
-                        })
-                        .collect::<Vec<_>>();
-                    good_segments.sort_unstable();
-                    let good_segments = good_segments.iter().collect::<String>();
-                    let val = match good_segments.as_str() {
-                        "abcefg" => 0,
-                        "cf" => 1,
-                        "acdeg" => 2,
-                        "acdfg" => 3,
-                        "bcdf" => 4,
-                        "abdfg" => 5,
-                        "abdefg" => 6,
-                        "acf" => 7,
-                        "abcdefg" => 8,
-                        "abcdfg" => 9,
-                        _ => panic!(
-                            "Cannot find digit for good {}, bad {}",
-                            good_segments, pattern
-                        ),
-                    };
-                    acc.insert(pattern, val);
-                    acc
-                })
-                .to_owned();
+                good_bad_mapping.add_bad_to_good(*unresolved[0], good_segment);
+            }
+
+            assign_unique_unresolved_bad_segment(&unique_patterns, &mut good_bad_mapping, 2, 'c');
+            assign_unique_unresolved_bad_segment(&unique_patterns, &mut good_bad_mapping, 3, 'a');
+            assign_unique_unresolved_bad_segment(&unique_patterns, &mut good_bad_mapping, 4, 'd');
+            assign_unique_unresolved_bad_segment(&unique_patterns, &mut good_bad_mapping, 5, 'g');
+
+            let pattern_to_digit = good_bad_mapping.get_pattern_to_digit(unique_patterns);
 
             outputs
                 .into_iter()
-                .map(|pattern| *bad_segments_to_digit.get(&pattern).unwrap())
+                .map(|pattern| {
+                    *pattern_to_digit
+                        .get(&pattern.iter().collect::<String>())
+                        .unwrap()
+                })
                 .fold(0, |acc, digit| acc * 10 + digit)
         })
         .sum::<i32>()
