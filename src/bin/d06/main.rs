@@ -25,6 +25,7 @@ fn p1(input: &str) -> String {
     fishes_days_left.len().to_string()
 }
 
+#[allow(dead_code)] // reason = "Showing an alternative method"
 fn solve_efficient_topdown(input: &str, total_days: i64) -> String {
     // using dynamic programming for "compute()"
     let mut compute_cache: HashMap<i64, i64> = HashMap::new();
