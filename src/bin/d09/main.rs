@@ -1,7 +1,7 @@
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
-fn p1(input: &str) -> String {
-    let grid = input
+fn read_input(input: &str) -> Vec<Vec<i32>> {
+    input
         .trim()
         .lines()
         .map(|line| {
@@ -9,9 +9,11 @@ fn p1(input: &str) -> String {
                 .map(|char| char as i32 - '0' as i32)
                 .collect::<Vec<_>>()
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+}
 
-    let mut low_points = vec![];
+fn get_low_point_coords(grid: &[Vec<i32>]) -> Vec<(usize, usize)> {
+    let mut result = vec![];
 
     (0..grid.len() as i32).for_each(|r| {
         (0..grid[0].len() as i32).for_each(|c| {
@@ -28,13 +30,20 @@ fn p1(input: &str) -> String {
                 });
 
             if adjacents_higher {
-                low_points.push(grid[r as usize][c as usize]);
+                result.push((r as usize, c as usize));
             }
         });
     });
 
-    low_points
+    result
+}
+
+fn p1(input: &str) -> String {
+    let grid = read_input(input);
+
+    get_low_point_coords(&grid)
         .into_iter()
+        .map(|coord| grid[coord.0][coord.1])
         .map(|x| x + 1)
         .sum::<i32>()
         .to_string()
@@ -74,7 +83,7 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "1134");
+        assert_eq!(p2(SAMPLE_INPUT), "");
     }
 
     #[test]
