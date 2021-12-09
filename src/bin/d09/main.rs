@@ -106,6 +106,7 @@ fn p2(input: &str) -> String {
                 match to_visit.pop_front() {
                     None => break,
                     Some(coord) => {
+                        #[allow(clippy::needless_collect)] // reason = "Collect is actually needed"
                         let unvisited_valid_neighbours = grid
                             .get_neighbours(coord)
                             .into_iter()
