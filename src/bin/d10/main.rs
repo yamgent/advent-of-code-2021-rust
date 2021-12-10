@@ -1,36 +1,61 @@
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
+enum Score {
+    Corrupted(u64),
+    Incomplete(u64),
+}
+
+impl Score {
+    pub fn calculate(line: &str) -> Self {
+        let mut stack = vec![];
+
+        for c in line.chars() {
+            match c {
+                '(' => stack.push(')'),
+                '[' => stack.push(']'),
+                '{' => stack.push('}'),
+                '<' => stack.push('>'),
+                _ => {
+                    let expected_closing = stack.pop().unwrap();
+                    if c != expected_closing {
+                        return Score::Corrupted(match c {
+                            ')' => 3,
+                            ']' => 57,
+                            '}' => 1197,
+                            '>' => 25137,
+                            _ => unreachable!(),
+                        });
+                    }
+                }
+            }
+        }
+
+        Score::Incomplete(stack.into_iter().rev().fold(0u64, |acc, c| {
+            acc * 5
+                + match c {
+                    ')' => 1,
+                    ']' => 2,
+                    '}' => 3,
+                    '>' => 4,
+                    _ => unreachable!(),
+                }
+        }))
+    }
+}
+
 fn p1(input: &str) -> String {
     input
         .trim()
         .lines()
-        .map(|line| {
-            let mut stack = vec![];
-
-            for c in line.chars() {
-                match c {
-                    '(' => stack.push(')'),
-                    '[' => stack.push(']'),
-                    '{' => stack.push('}'),
-                    '<' => stack.push('>'),
-                    _ => {
-                        let expected_closing = stack.pop().unwrap();
-                        if c != expected_closing {
-                            return match c {
-                                ')' => 3,
-                                ']' => 57,
-                                '}' => 1197,
-                                '>' => 25137,
-                                _ => panic!("Unknown character {}", c),
-                            };
-                        }
-                    }
-                }
+        .map(Score::calculate)
+        .map(|s| {
+            if let Score::Corrupted(value) = s {
+                value
+            } else {
+                0
             }
-
-            0
         })
-        .sum::<i32>()
+        .sum::<u64>()
         .to_string()
 }
 
@@ -38,34 +63,13 @@ fn p2(input: &str) -> String {
     let mut scores = input
         .trim()
         .lines()
-        .flat_map(|line| {
-            let mut stack = vec![];
-
-            for c in line.chars() {
-                match c {
-                    '(' => stack.push(')'),
-                    '[' => stack.push(']'),
-                    '{' => stack.push('}'),
-                    '<' => stack.push('>'),
-                    _ => {
-                        let expected_closing = stack.pop().unwrap();
-                        if c != expected_closing {
-                            return None;
-                        }
-                    }
-                }
+        .map(Score::calculate)
+        .filter_map(|s| {
+            if let Score::Incomplete(value) = s {
+                Some(value)
+            } else {
+                None
             }
-
-            Some(stack.into_iter().rev().fold(0u64, |acc, c| {
-                acc * 5
-                    + match c {
-                        ')' => 1,
-                        ']' => 2,
-                        '}' => 3,
-                        '>' => 4,
-                        _ => panic!("Unknown character {}", c),
-                    }
-            }))
         })
         .collect::<Vec<_>>();
 
