@@ -35,8 +35,46 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let illegal = -1;
+
+    let mut scores = input
+        .trim()
+        .lines()
+        .map(|line| {
+            let mut stack = vec![];
+
+            for c in line.chars() {
+                match c {
+                    '(' => stack.push(')'),
+                    '[' => stack.push(']'),
+                    '{' => stack.push('}'),
+                    '<' => stack.push('>'),
+                    _ => {
+                        let expected_closing = stack.pop().unwrap();
+                        if c != expected_closing {
+                            return illegal;
+                        }
+                    }
+                }
+            }
+
+            stack.into_iter().rev().fold(0i64, |acc, c| {
+                acc * 5
+                    + match c {
+                        ')' => 1,
+                        ']' => 2,
+                        '}' => 3,
+                        '>' => 4,
+                        _ => panic!("Unknown character {}", c),
+                    }
+            })
+        })
+        .filter(|&score| score != illegal)
+        .collect::<Vec<_>>();
+
+    scores.sort_unstable();
+
+    scores[scores.len() / 2].to_string()
 }
 
 fn main() {
@@ -73,12 +111,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "288957");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "1190420163");
     }
 }
