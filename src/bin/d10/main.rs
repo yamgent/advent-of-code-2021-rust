@@ -35,12 +35,10 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let illegal = -1;
-
     let mut scores = input
         .trim()
         .lines()
-        .map(|line| {
+        .flat_map(|line| {
             let mut stack = vec![];
 
             for c in line.chars() {
@@ -52,13 +50,13 @@ fn p2(input: &str) -> String {
                     _ => {
                         let expected_closing = stack.pop().unwrap();
                         if c != expected_closing {
-                            return illegal;
+                            return None;
                         }
                     }
                 }
             }
 
-            stack.into_iter().rev().fold(0i64, |acc, c| {
+            Some(stack.into_iter().rev().fold(0u64, |acc, c| {
                 acc * 5
                     + match c {
                         ')' => 1,
@@ -67,9 +65,8 @@ fn p2(input: &str) -> String {
                         '>' => 4,
                         _ => panic!("Unknown character {}", c),
                     }
-            })
+            }))
         })
-        .filter(|&score| score != illegal)
         .collect::<Vec<_>>();
 
     scores.sort_unstable();
