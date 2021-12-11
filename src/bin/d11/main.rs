@@ -49,20 +49,21 @@ impl Cavern {
 
     fn step(&mut self) -> i32 {
         let mut counter = 0;
-        let mut to_visit = VecDeque::new();
+        let mut to_visit_for_flash = VecDeque::new();
 
         self.grid.iter_mut().enumerate().for_each(|(r, row)| {
             row.iter_mut().enumerate().for_each(|(c, cell)| {
                 *cell += 1;
 
                 if *cell > 9 {
-                    to_visit.push_back((r, c));
+                    to_visit_for_flash.push_back((r, c));
                 }
             });
         });
 
-        while let Some(coord) = to_visit.pop_front() {
+        while let Some(coord) = to_visit_for_flash.pop_front() {
             if self.grid[coord.0][coord.1] == 0 {
+                // already flashed once
                 continue;
             }
 
@@ -74,7 +75,7 @@ impl Cavern {
                     self.grid[c.0][c.1] += 1;
 
                     if self.grid[c.0][c.1] > 9 {
-                        to_visit.push_back(c);
+                        to_visit_for_flash.push_back(c);
                     }
                 }
             });
@@ -114,14 +115,84 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
-    // TODO: Write test for this?
-    /*
     #[test]
-    fn test_neighbour() {
-        assert_eq!(get_neighbours((1, 1), 10, 10), vec![]);
+    fn test_neighbour_coords() {
+        let cavern = Cavern::from_input("000\n000\n000\n");
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((0, 0))),
+            [(0, 1), (1, 0), (1, 1)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((0, 1))),
+            [(0, 0), (0, 2), (1, 0), (1, 1), (1, 2)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((0, 2))),
+            [(0, 1), (1, 1), (1, 2)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((1, 0))),
+            [(0, 0), (0, 1), (1, 1), (2, 0), (2, 1)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((1, 1))),
+            [
+                (0, 0),
+                (0, 1),
+                (0, 2),
+                (1, 0),
+                (1, 2),
+                (2, 0),
+                (2, 1),
+                (2, 2)
+            ]
+            .into_iter()
+            .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((1, 2))),
+            [(0, 1), (0, 2), (1, 1), (2, 1), (2, 2)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((2, 0))),
+            [(1, 0), (1, 1), (2, 1)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((2, 1))),
+            [(1, 0), (1, 1), (1, 2), (2, 0), (2, 2)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
+
+        assert_eq!(
+            HashSet::from_iter(cavern.get_neighbour_coords((2, 2))),
+            [(1, 1), (1, 2), (2, 1)]
+                .into_iter()
+                .collect::<HashSet<(usize, usize)>>()
+        );
     }
-    */
 
     const SAMPLE_INPUT: &str = r"
 5483143223
