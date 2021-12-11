@@ -94,8 +94,16 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let mut cavern = Cavern::from_input(input);
+
+    let mut step = 1;
+    let total = (cavern.get_height() * cavern.get_width()) as i32;
+
+    while cavern.step() != total {
+        step += 1;
+    }
+
+    step.to_string()
 }
 
 fn main() {
@@ -140,12 +148,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "195");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "212");
     }
 }
