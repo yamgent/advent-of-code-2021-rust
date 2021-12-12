@@ -64,6 +64,14 @@ impl Graph {
         self.p1_count_paths_to_end("start", &mut HashSet::new())
     }
 
+    // changing visited_twice_small from Option<String> to &Option<String>
+    // (no reference -> reference) improved the performance of the p2() method
+    // for actual input.
+    //
+    // on test_p2_actual(), the timings before were:
+    //      1.33s, 1.34s, 1.33s, 1.33s, 1.36s
+    // and after the change:
+    //      1.26s, 1.26s, 1.28s, 1.27s, 1.27s
     fn p2_count_paths_to_end(
         &self,
         current: &str,
