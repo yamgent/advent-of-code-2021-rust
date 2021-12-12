@@ -51,7 +51,7 @@ impl Graph {
                 .map(|neighbour| {
                     if Graph::is_big(neighbour) {
                         self.p1_count_paths_to_end(neighbour, visited_smalls)
-                    } else if !visited_smalls.contains(neighbour) {
+                    } else if neighbour != "start" && !visited_smalls.contains(neighbour) {
                         visited_smalls.insert(neighbour.to_owned());
                         let count = self.p1_count_paths_to_end(neighbour, visited_smalls);
                         visited_smalls.remove(neighbour);
@@ -65,9 +65,60 @@ impl Graph {
     }
 
     fn p1_count_total_paths(&self) -> usize {
-        let mut visited_smalls = HashSet::new();
-        visited_smalls.insert("start".to_owned());
-        self.p1_count_paths_to_end("start", &mut visited_smalls)
+        self.p1_count_paths_to_end("start", &mut HashSet::new())
+    }
+
+    fn p2_count_paths_to_end(
+        &self,
+        current: &str,
+        visited_once_smalls: &mut HashSet<String>,
+        visited_twice_small: Option<String>,
+    ) -> usize {
+        if current == "end" {
+            1
+        } else {
+            self.vertices
+                .get(current)
+                .unwrap()
+                .iter()
+                .map(|neighbour| {
+                    if Graph::is_big(neighbour) {
+                        self.p2_count_paths_to_end(
+                            neighbour,
+                            visited_once_smalls,
+                            visited_twice_small.clone(),
+                        )
+                    } else if neighbour != "start" {
+                        if visited_once_smalls.contains(neighbour) {
+                            if visited_twice_small.is_none() {
+                                self.p2_count_paths_to_end(
+                                    neighbour,
+                                    visited_once_smalls,
+                                    Some(neighbour.to_owned()),
+                                )
+                            } else {
+                                0
+                            }
+                        } else {
+                            visited_once_smalls.insert(neighbour.to_owned());
+                            let count = self.p2_count_paths_to_end(
+                                neighbour,
+                                visited_once_smalls,
+                                visited_twice_small.clone(),
+                            );
+                            visited_once_smalls.remove(neighbour);
+                            count
+                        }
+                    } else {
+                        0
+                    }
+                })
+                .sum::<usize>()
+        }
+    }
+
+    fn p2_count_total_paths(&self) -> usize {
+        self.p2_count_paths_to_end("start", &mut HashSet::new(), None)
     }
 }
 
@@ -76,8 +127,7 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    Graph::from_input(input).p2_count_total_paths().to_string()
 }
 
 fn main() {
@@ -147,14 +197,13 @@ start-RW
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SMALL_SAMPLE), "");
-        assert_eq!(p2(LARGE_SAMPLE), "");
-        assert_eq!(p2(LARGEST_SAMPLE), "");
+        assert_eq!(p2(SMALL_SAMPLE), "36");
+        assert_eq!(p2(LARGE_SAMPLE), "103");
+        assert_eq!(p2(LARGEST_SAMPLE), "3509");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "96988");
     }
 }
