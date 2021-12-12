@@ -40,7 +40,7 @@ impl Graph {
         (('a' as i32)..=('z' as i32)).contains(&(vertex.chars().next().unwrap() as i32))
     }
 
-    fn count_paths_to_end(&self, current: &str, visited_smalls: &mut HashSet<String>) -> usize {
+    fn p1_count_paths_to_end(&self, current: &str, visited_smalls: &mut HashSet<String>) -> usize {
         if current == "end" {
             1
         } else {
@@ -50,10 +50,10 @@ impl Graph {
                 .iter()
                 .map(|neighbour| {
                     if Graph::is_big(neighbour) {
-                        self.count_paths_to_end(neighbour, visited_smalls)
+                        self.p1_count_paths_to_end(neighbour, visited_smalls)
                     } else if !visited_smalls.contains(neighbour) {
                         visited_smalls.insert(neighbour.to_owned());
-                        let count = self.count_paths_to_end(neighbour, visited_smalls);
+                        let count = self.p1_count_paths_to_end(neighbour, visited_smalls);
                         visited_smalls.remove(neighbour);
                         count
                     } else {
@@ -64,15 +64,15 @@ impl Graph {
         }
     }
 
-    fn count_total_paths(&self) -> usize {
+    fn p1_count_total_paths(&self) -> usize {
         let mut visited_smalls = HashSet::new();
         visited_smalls.insert("start".to_owned());
-        self.count_paths_to_end("start", &mut visited_smalls)
+        self.p1_count_paths_to_end("start", &mut visited_smalls)
     }
 }
 
 fn p1(input: &str) -> String {
-    Graph::from_input(input).count_total_paths().to_string()
+    Graph::from_input(input).p1_count_total_paths().to_string()
 }
 
 fn p2(input: &str) -> String {
@@ -89,12 +89,7 @@ fn main() {
 mod tests {
     use super::*;
 
-    const SAMPLE_INPUT: &str = "";
-
-    #[test]
-    fn test_p1_sample() {
-        assert_eq!(
-            p1(r"
+    const SMALL_SAMPLE: &str = r"
 start-A
 start-b
 A-c
@@ -102,12 +97,9 @@ A-b
 b-d
 A-end
 b-end
-"),
-            "10"
-        );
+";
 
-        assert_eq!(
-            p1(r"
+    const LARGE_SAMPLE: &str = r"
 dc-end
 HN-start
 start-kj
@@ -118,12 +110,9 @@ HN-end
 kj-sa
 kj-HN
 kj-dc
-"),
-            "19"
-        );
+";
 
-        assert_eq!(
-            p1(r"
+    const LARGEST_SAMPLE: &str = r"
 fs-end
 he-DX
 fs-he
@@ -142,9 +131,13 @@ he-WI
 zg-he
 pj-fs
 start-RW
-"),
-            "226"
-        );
+";
+
+    #[test]
+    fn test_p1_sample() {
+        assert_eq!(p1(SMALL_SAMPLE), "10");
+        assert_eq!(p1(LARGE_SAMPLE), "19");
+        assert_eq!(p1(LARGEST_SAMPLE), "226");
     }
 
     #[test]
@@ -154,7 +147,9 @@ start-RW
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SMALL_SAMPLE), "");
+        assert_eq!(p2(LARGE_SAMPLE), "");
+        assert_eq!(p2(LARGEST_SAMPLE), "");
     }
 
     #[test]
