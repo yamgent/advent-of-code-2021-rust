@@ -32,8 +32,8 @@ impl Graph {
         Self { vertices }
     }
 
-    fn is_big(vertex: &str) -> bool {
-        (('A' as i32)..=('Z' as i32)).contains(&(vertex.chars().next().unwrap() as i32))
+    fn is_big_cave(vertex: &str) -> bool {
+        vertex.chars().next().unwrap().is_ascii_uppercase()
     }
 
     fn p1_count_paths_to_end(&self, current: &str, visited_smalls: &mut HashSet<String>) -> usize {
@@ -45,7 +45,7 @@ impl Graph {
                 .unwrap()
                 .iter()
                 .map(|neighbour| {
-                    if Graph::is_big(neighbour) {
+                    if Graph::is_big_cave(neighbour) {
                         self.p1_count_paths_to_end(neighbour, visited_smalls)
                     } else if neighbour != "start" && !visited_smalls.contains(neighbour) {
                         visited_smalls.insert(neighbour.to_owned());
@@ -68,7 +68,7 @@ impl Graph {
         &self,
         current: &str,
         visited_once_smalls: &mut HashSet<String>,
-        visited_twice_small: Option<String>,
+        visited_twice_small: &Option<String>,
     ) -> usize {
         if current == "end" {
             1
@@ -78,11 +78,11 @@ impl Graph {
                 .unwrap()
                 .iter()
                 .map(|neighbour| {
-                    if Graph::is_big(neighbour) {
+                    if Graph::is_big_cave(neighbour) {
                         self.p2_count_paths_to_end(
                             neighbour,
                             visited_once_smalls,
-                            visited_twice_small.clone(),
+                            visited_twice_small,
                         )
                     } else if neighbour != "start" {
                         if visited_once_smalls.contains(neighbour) {
@@ -90,7 +90,7 @@ impl Graph {
                                 self.p2_count_paths_to_end(
                                     neighbour,
                                     visited_once_smalls,
-                                    Some(neighbour.to_owned()),
+                                    &Some(neighbour.to_owned()),
                                 )
                             } else {
                                 0
@@ -100,7 +100,7 @@ impl Graph {
                             let count = self.p2_count_paths_to_end(
                                 neighbour,
                                 visited_once_smalls,
-                                visited_twice_small.clone(),
+                                visited_twice_small,
                             );
                             visited_once_smalls.remove(neighbour);
                             count
@@ -114,7 +114,7 @@ impl Graph {
     }
 
     fn p2_count_total_paths(&self) -> usize {
-        self.p2_count_paths_to_end("start", &mut HashSet::new(), None)
+        self.p2_count_paths_to_end("start", &mut HashSet::new(), &None)
     }
 }
 
