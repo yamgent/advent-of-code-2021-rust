@@ -36,10 +36,6 @@ impl Graph {
         (('A' as i32)..=('Z' as i32)).contains(&(vertex.chars().next().unwrap() as i32))
     }
 
-    fn is_small(vertex: &str) -> bool {
-        (('a' as i32)..=('z' as i32)).contains(&(vertex.chars().next().unwrap() as i32))
-    }
-
     fn p1_count_paths_to_end(&self, current: &str, visited_smalls: &mut HashSet<String>) -> usize {
         if current == "end" {
             1
