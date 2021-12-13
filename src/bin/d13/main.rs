@@ -22,7 +22,7 @@ fn get_points_display(points: &HashSet<(i32, i32)>) -> String {
     string_buffer
 }
 
-fn p1(input: &str) -> String {
+fn solve(input: &str) -> (usize, String) {
     let mut points = input
         .trim()
         .lines()
@@ -33,16 +33,18 @@ fn p1(input: &str) -> String {
         })
         .collect::<HashSet<_>>();
 
+    let mut first_fold_dots_count = None;
+
     input
         .trim()
         .lines()
         .filter(|line| line.starts_with("fold"))
-        .take(1)
         .for_each(|line| {
             let line = line.strip_prefix("fold along ").unwrap();
             let (direction, position) = line.split_once('=').unwrap();
             let position = position.parse::<i32>().unwrap();
 
+            #[allow(clippy::needless_collect)] // reason = "collect is actually needed"
             let points_to_remove = points
                 .iter()
                 .filter(|point| match direction {
@@ -63,54 +65,21 @@ fn p1(input: &str) -> String {
                 points.remove(&point);
                 points.insert(new_point);
             });
+
+            if first_fold_dots_count.is_none() {
+                first_fold_dots_count = Some(points.len());
+            }
         });
 
-    points.len().to_string()
+    (first_fold_dots_count.unwrap(), get_points_display(&points))
+}
+
+fn p1(input: &str) -> String {
+    solve(input).0.to_string()
 }
 
 fn p2(input: &str) -> String {
-    let mut points = input
-        .trim()
-        .lines()
-        .filter(|line| !line.is_empty() && !line.starts_with("fold"))
-        .map(|line| {
-            let (x, y) = line.split_once(',').unwrap();
-            (x.parse::<i32>().unwrap(), y.parse::<i32>().unwrap())
-        })
-        .collect::<HashSet<_>>();
-
-    input
-        .trim()
-        .lines()
-        .filter(|line| line.starts_with("fold"))
-        .for_each(|line| {
-            let line = line.strip_prefix("fold along ").unwrap();
-            let (direction, position) = line.split_once('=').unwrap();
-            let position = position.parse::<i32>().unwrap();
-
-            let points_to_remove = points
-                .iter()
-                .filter(|point| match direction {
-                    "y" => point.1 > position,
-                    "x" => point.0 > position,
-                    _ => panic!("Unknown direction {}", direction),
-                })
-                .copied()
-                .collect::<Vec<_>>();
-
-            points_to_remove.into_iter().for_each(|point| {
-                let new_point = match direction {
-                    "y" => (point.0, 2 * position - point.1),
-                    "x" => (2 * position - point.0, point.1),
-                    _ => panic!("Unknown direction {}", direction),
-                };
-
-                points.remove(&point);
-                points.insert(new_point);
-            });
-        });
-
-    get_points_display(&points)
+    solve(input).1
 }
 
 fn main() {
