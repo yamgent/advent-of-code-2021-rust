@@ -2,44 +2,6 @@ use std::collections::HashMap;
 
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
-fn p1(input: &str) -> String {
-    let (template, rules_string) = input.trim().split_once("\n\n").unwrap();
-
-    let template = template.to_owned();
-    let mut rules = HashMap::new();
-
-    rules_string.split('\n').for_each(|rule| {
-        let (input, output) = rule.split_once(" -> ").unwrap();
-        rules.insert(input.to_owned(), output.to_owned());
-    });
-
-    let result = (0..10).fold(template, |acc, _| {
-        let mut updated = String::new();
-
-        let chars = acc.chars().collect::<Vec<_>>();
-        chars.windows(2).into_iter().for_each(|pair| {
-            let input = pair.iter().collect::<String>();
-            updated.push(pair[0]);
-            updated.push_str(rules.get(&input).unwrap());
-        });
-
-        updated.push(chars[chars.len() - 1]);
-
-        updated
-    });
-
-    let mut count = HashMap::new();
-
-    result.chars().for_each(|c| {
-        *count.entry(c).or_insert(0) += 1;
-    });
-
-    let max = *count.iter().max_by(|a, b| a.1.cmp(b.1)).unwrap().1;
-    let min = *count.iter().min_by(|a, b| a.1.cmp(b.1)).unwrap().1;
-
-    (max - min).to_string()
-}
-
 fn parse_input(input: &str) -> (String, HashMap<String, char>) {
     let (template, rule_lines) = input.trim().split_once("\n\n").unwrap();
 
@@ -54,7 +16,7 @@ fn parse_input(input: &str) -> (String, HashMap<String, char>) {
     (template.to_owned(), rules)
 }
 
-fn p2(input: &str) -> String {
+fn solve(input: &str, steps: i32) -> String {
     let (template, rules) = parse_input(input);
 
     let mut counts: HashMap<char, i128> = HashMap::new();
@@ -71,31 +33,40 @@ fn p2(input: &str) -> String {
             *pairs_seen.entry(pair).or_insert(0) += 1;
         });
 
-    let steps = 40;
-
     let (counts, _) = (0..steps).fold((counts, pairs_seen), |(mut counts, pairs_seen), _| {
         let mut updated_seen = HashMap::new();
 
         pairs_seen.into_iter().for_each(|occurence| {
             let first_char = occurence.0.chars().next().unwrap();
-            let second_char = rules.get(&occurence.0).unwrap();
             let third_char = occurence.0.chars().nth(1).unwrap();
+            let second_char = rules.get(&occurence.0).unwrap();
+            let total = occurence.1;
 
             let first_pair = format!("{}{}", first_char, second_char);
             let second_pair = format!("{}{}", second_char, third_char);
 
-            *updated_seen.entry(first_pair).or_insert(0) += occurence.1;
-            *updated_seen.entry(second_pair).or_insert(0) += occurence.1;
-            *counts.entry(*second_char).or_insert(0) += occurence.1;
+            *updated_seen.entry(first_pair).or_insert(0) += total;
+            *updated_seen.entry(second_pair).or_insert(0) += total;
+            *counts.entry(*second_char).or_insert(0) += total;
         });
 
         (counts, updated_seen)
     });
 
-    let max = *counts.iter().max_by(|a, b| a.1.cmp(b.1)).unwrap().1;
-    let min = *counts.iter().min_by(|a, b| a.1.cmp(b.1)).unwrap().1;
+    let counts = counts.into_iter().map(|count| count.1).collect::<Vec<_>>();
+
+    let max = *counts.iter().max().unwrap();
+    let min = *counts.iter().min().unwrap();
 
     (max - min).to_string()
+}
+
+fn p1(input: &str) -> String {
+    solve(input, 10)
+}
+
+fn p2(input: &str) -> String {
+    solve(input, 40)
 }
 
 fn main() {
