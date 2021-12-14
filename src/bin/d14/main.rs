@@ -19,12 +19,12 @@ fn parse_input(input: &str) -> (String, HashMap<String, char>) {
 fn solve(input: &str, steps: i32) -> String {
     let (template, rules) = parse_input(input);
 
-    let mut counts: HashMap<char, i128> = HashMap::new();
+    let mut counts: HashMap<char, i64> = HashMap::new();
     template.chars().for_each(|c| {
         *counts.entry(c).or_insert(0) += 1;
     });
 
-    let mut pairs_seen: HashMap<String, i128> = HashMap::new();
+    let mut pairs_seen: HashMap<String, i64> = HashMap::new();
     template
         .chars()
         .zip(template.chars().skip(1))
