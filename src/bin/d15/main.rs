@@ -1,6 +1,27 @@
-use std::{collections::BinaryHeap, iter};
+use std::collections::{BinaryHeap, HashMap};
 
 const ACTUAL_INPUT: &str = include_str!("input.txt");
+
+trait Grid {
+    fn get(&self, pos: (usize, usize)) -> i32;
+    fn width(&self) -> usize;
+    fn height(&self) -> usize;
+
+    fn get_neighbours(&self, current: (usize, usize)) -> Vec<(usize, usize)> {
+        let (r, c) = (current.0 as i32, current.1 as i32);
+
+        [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]
+            .into_iter()
+            .filter(|pos| {
+                pos.0 >= 0
+                    && pos.1 >= 0
+                    && pos.0 < self.height() as i32
+                    && pos.1 < self.width() as i32
+            })
+            .map(|pos| (pos.0 as usize, pos.1 as usize))
+            .collect::<Vec<_>>()
+    }
+}
 
 #[derive(Eq, PartialEq)]
 struct DijkstraCost {
@@ -24,79 +45,49 @@ impl Ord for DijkstraCost {
     }
 }
 
-fn get_neighbours(current: (usize, usize), grid: &[Vec<i32>]) -> Vec<(usize, usize)> {
-    let r = current.0 as i32;
-    let c = current.1 as i32;
+fn dijkstra_shortest(grid: &impl Grid) -> String {
+    let target = (grid.height() - 1, grid.width() - 1);
 
-    [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]
-        .into_iter()
-        .filter(|coord| {
-            coord.0 >= 0
-                && coord.1 >= 0
-                && coord.0 < grid.len() as i32
-                && coord.1 < grid[0].len() as i32
-        })
-        .map(|coord| (coord.0 as usize, coord.1 as usize))
-        .collect::<Vec<_>>()
-}
+    let mut dist = HashMap::new();
+    let mut prev = HashMap::new();
 
-fn p1(input: &str) -> String {
-    let grid = input
-        .trim()
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c as i32 - '0' as i32)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-
-    // use dijkstra to find shortest
-    let target = (grid.len() - 1, grid[0].len() - 1);
     let mut heap = BinaryHeap::new();
 
-    let infinity = 999999;
-
-    let mut dist = iter::repeat(
-        iter::repeat(infinity)
-            .take(grid[0].len())
-            .collect::<Vec<_>>(),
-    )
-    .take(grid.len())
-    .collect::<Vec<_>>();
-    let mut prev = iter::repeat(iter::repeat(None).take(grid[0].len()).collect::<Vec<_>>())
-        .take(grid.len())
-        .collect::<Vec<_>>();
-
-    dist[0][0] = 0;
+    dist.insert((0, 0), 0);
     heap.push(DijkstraCost {
         position: (0, 0),
         cost: 0,
     });
 
     while !heap.is_empty() {
-        let info = heap.pop().unwrap();
+        let selected = heap.pop().unwrap();
+        let selected_dist = *dist.get(&selected.position).unwrap();
 
-        if dist[info.position.0][info.position.1] < info.cost {
-            // already found a better one
+        if selected_dist < selected.cost {
+            // found a better path already
             continue;
         }
 
-        if info.position == target {
-            // found our answer
+        if selected.position == target {
+            // we can halt the loop, a path is already found
             break;
         }
 
-        get_neighbours(info.position, &grid)
+        grid.get_neighbours(selected.position)
             .into_iter()
-            .for_each(|coord| {
-                let alt = dist[info.position.0][info.position.1] + grid[coord.0][coord.1];
+            .for_each(|neighbour_coord| {
+                let alt = selected_dist + grid.get(neighbour_coord);
 
-                if alt < dist[coord.0][coord.1] {
-                    dist[coord.0][coord.1] = alt;
-                    prev[coord.0][coord.1] = Some(info.position);
+                let is_better = match dist.get(&neighbour_coord) {
+                    None => true,
+                    Some(&cost) => alt < cost,
+                };
+
+                if is_better {
+                    dist.insert(neighbour_coord, alt);
+                    prev.insert(neighbour_coord, selected.position);
                     heap.push(DijkstraCost {
-                        position: coord,
+                        position: neighbour_coord,
                         cost: alt,
                     });
                 }
@@ -106,11 +97,47 @@ fn p1(input: &str) -> String {
     let mut current_pos = target;
     let mut shortest_cost = 0;
     while current_pos != (0, 0) {
-        shortest_cost += grid[current_pos.0][current_pos.1];
-        current_pos = prev[current_pos.0][current_pos.1].unwrap();
+        shortest_cost += grid.get(current_pos);
+        current_pos = *prev.get(&current_pos).unwrap();
     }
 
     shortest_cost.to_string()
+}
+
+struct P1Grid {
+    grid: Vec<Vec<i32>>,
+}
+
+impl Grid for P1Grid {
+    fn get(&self, pos: (usize, usize)) -> i32 {
+        self.grid[pos.0][pos.1]
+    }
+
+    fn width(&self) -> usize {
+        self.grid[0].len()
+    }
+
+    fn height(&self) -> usize {
+        self.grid.len()
+    }
+}
+
+fn parse_input(input: &str) -> Vec<Vec<i32>> {
+    input
+        .trim()
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|c| c as i32 - '0' as i32)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
+}
+
+fn p1(input: &str) -> String {
+    dijkstra_shortest(&P1Grid {
+        grid: parse_input(input),
+    })
 }
 
 fn p2(input: &str) -> String {
