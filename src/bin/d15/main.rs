@@ -3,11 +3,11 @@ use std::collections::{BinaryHeap, HashMap};
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
 trait Grid {
-    fn get(&self, pos: (usize, usize)) -> i32;
+    fn get(&self, pos: &(usize, usize)) -> i32;
     fn width(&self) -> usize;
     fn height(&self) -> usize;
 
-    fn get_neighbours(&self, current: (usize, usize)) -> Vec<(usize, usize)> {
+    fn get_neighbours(&self, current: &(usize, usize)) -> Vec<(usize, usize)> {
         let (r, c) = (current.0 as i32, current.1 as i32);
 
         [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]
@@ -73,10 +73,10 @@ fn dijkstra_shortest(grid: &impl Grid) -> String {
             break;
         }
 
-        grid.get_neighbours(selected.position)
+        grid.get_neighbours(&selected.position)
             .into_iter()
             .for_each(|neighbour_coord| {
-                let alt = selected_dist + grid.get(neighbour_coord);
+                let alt = selected_dist + grid.get(&neighbour_coord);
 
                 let is_better = match dist.get(&neighbour_coord) {
                     None => true,
@@ -97,7 +97,7 @@ fn dijkstra_shortest(grid: &impl Grid) -> String {
     let mut current_pos = target;
     let mut shortest_cost = 0;
     while current_pos != (0, 0) {
-        shortest_cost += grid.get(current_pos);
+        shortest_cost += grid.get(&current_pos);
         current_pos = *prev.get(&current_pos).unwrap();
     }
 
@@ -109,7 +109,7 @@ struct P1Grid {
 }
 
 impl Grid for P1Grid {
-    fn get(&self, pos: (usize, usize)) -> i32 {
+    fn get(&self, pos: &(usize, usize)) -> i32 {
         self.grid[pos.0][pos.1]
     }
 
@@ -145,7 +145,7 @@ struct P2Grid {
 }
 
 impl Grid for P2Grid {
-    fn get(&self, pos: (usize, usize)) -> i32 {
+    fn get(&self, pos: &(usize, usize)) -> i32 {
         let actual_r = pos.0 % self.grid.len();
         let actual_c = pos.1 % self.grid[0].len();
         let actual_value = self.grid[actual_r][actual_c];
