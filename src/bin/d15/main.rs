@@ -140,9 +140,35 @@ fn p1(input: &str) -> String {
     })
 }
 
+struct P2Grid {
+    grid: Vec<Vec<i32>>,
+}
+
+impl Grid for P2Grid {
+    fn get(&self, pos: (usize, usize)) -> i32 {
+        let actual_r = pos.0 % self.grid.len();
+        let actual_c = pos.1 % self.grid[0].len();
+        let actual_value = self.grid[actual_r][actual_c];
+
+        let increment_r = (pos.0 / self.grid.len()) as i32;
+        let increment_c = (pos.1 / self.grid[0].len()) as i32;
+
+        ((actual_value - 1 + increment_r + increment_c) % 9) + 1
+    }
+
+    fn width(&self) -> usize {
+        self.grid[0].len() * 5
+    }
+
+    fn height(&self) -> usize {
+        self.grid.len() * 5
+    }
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    dijkstra_shortest(&P2Grid {
+        grid: parse_input(input),
+    })
 }
 
 fn main() {
@@ -179,12 +205,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "315");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "2995");
     }
 }
