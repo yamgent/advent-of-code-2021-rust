@@ -31,9 +31,8 @@ struct DijkstraCost {
 
 impl PartialOrd for DijkstraCost {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // compare in reverse, since the binary heap
-        // is a max heap, not a min heap
-        other.cost.partial_cmp(&self.cost)
+        // can just use Ord
+        Some(self.cmp(other))
     }
 }
 
@@ -41,7 +40,15 @@ impl Ord for DijkstraCost {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // compare in reverse, since the binary heap
         // is a max heap, not a min heap
-        other.cost.cmp(&self.cost)
+        //
+        // even though we don't use position, we MUST compare it,
+        // since we do compare position for the derived PartialEq,
+        // otherwise Rust standard says that this inconsistency
+        // may result in weird behaviours
+        other
+            .cost
+            .cmp(&self.cost)
+            .then_with(|| self.position.cmp(&other.position))
     }
 }
 
