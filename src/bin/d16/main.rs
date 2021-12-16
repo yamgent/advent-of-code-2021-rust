@@ -1,185 +1,143 @@
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
-fn read(bits: &str, start: usize, count: usize) -> u64 {
-    u64::from_str_radix(&bits[start..(start + count)], 2).unwrap()
+struct PacketEvaluation {
+    version_sums: u64,
+    value: u64,
 }
 
-fn read_packet(bits: &str, start: usize, end: usize) -> (u64, usize) {
-    let mut ptr = start;
+struct BitStream {
+    bits: String,
+    ptr: usize,
+}
 
-    let version = read(bits, ptr, 3);
-    ptr += 3;
-    let type_id = read(bits, ptr, 3);
-    ptr += 3;
+impl BitStream {
+    fn from_input(input: &str) -> Self {
+        Self {
+            bits: input
+                .trim()
+                .chars()
+                .map(|c| format!("{:04b}", u8::from_str_radix(&c.to_string(), 16).unwrap()))
+                .collect::<String>(),
+            ptr: 0,
+        }
+    }
 
-    match type_id {
-        4 => loop {
-            let value = read(bits, ptr, 5);
-            ptr += 5;
+    fn read(&mut self, count: usize) -> u64 {
+        let start = self.ptr;
+        let end = start + count;
 
-            if value & 16 == 0 {
-                return (version, ptr);
+        self.ptr = end;
+
+        u64::from_str_radix(&self.bits[start..end], 2).unwrap()
+    }
+
+    fn parse_packet(&mut self) -> PacketEvaluation {
+        let version = self.read(3);
+        let type_id = self.read(3);
+
+        match type_id {
+            4 => {
+                let mut value = 0;
+
+                loop {
+                    let sub_value = self.read(5);
+                    value = value * 16 + (sub_value & 15);
+
+                    if sub_value & 16 == 0 {
+                        return PacketEvaluation {
+                            version_sums: version,
+                            value,
+                        };
+                    }
+                }
             }
-        },
-        _ => {
-            let length_type_id = read(bits, ptr, 1);
-            ptr += 1;
+            _ => {
+                let length_type_id = self.read(1);
 
-            match length_type_id {
-                0 => {
-                    let total_length_bits = read(bits, ptr, 15) as usize;
-                    ptr += 15;
-                    let end = ptr + total_length_bits;
+                let mut inner_version_sums = 0;
+                let mut inner_values = vec![];
 
-                    let mut inner_version_sum = 0;
+                match length_type_id {
+                    0 => {
+                        let total_length_bits = self.read(15) as usize;
+                        let end = self.ptr + total_length_bits;
 
-                    while ptr != end {
-                        let (inner_version, inner_end) = read_packet(bits, ptr, end);
-                        inner_version_sum += inner_version;
-                        ptr = inner_end;
+                        while self.ptr != end {
+                            let inner = self.parse_packet();
+                            inner_version_sums += inner.version_sums;
+                            inner_values.push(inner.value);
 
-                        if ptr > end {
-                            panic!("Overshot??");
+                            if self.ptr > end {
+                                panic!("Overshot??");
+                            }
                         }
                     }
+                    1 => {
+                        let total_packets = self.read(11);
 
-                    (version + inner_version_sum, end)
+                        (0..total_packets).for_each(|_| {
+                            let inner = self.parse_packet();
+                            inner_version_sums += inner.version_sums;
+                            inner_values.push(inner.value);
+                        });
+                    }
+                    _ => panic!("Unknown length_type_id {}", length_type_id),
                 }
-                1 => {
-                    let total_packets = read(bits, ptr, 11);
-                    ptr += 11;
 
-                    let mut inner_version_sum = 0;
-
-                    (0..total_packets).for_each(|_| {
-                        let (inner_version, inner_end) = read_packet(bits, ptr, end);
-                        inner_version_sum += inner_version;
-                        ptr = inner_end;
-
-                        if ptr > end {
-                            panic!("Overshot??");
+                let result = match type_id {
+                    0 => inner_values.into_iter().sum(),
+                    1 => inner_values.into_iter().product(),
+                    2 => inner_values.into_iter().min().unwrap(),
+                    3 => inner_values.into_iter().max().unwrap(),
+                    5 => {
+                        if inner_values[0] > inner_values[1] {
+                            1
+                        } else {
+                            0
                         }
-                    });
+                    }
+                    6 => {
+                        if inner_values[0] < inner_values[1] {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    7 => {
+                        if inner_values[0] == inner_values[1] {
+                            1
+                        } else {
+                            0
+                        }
+                    }
+                    _ => panic!("Unknown type_id {}", type_id),
+                };
 
-                    (version + inner_version_sum, ptr)
+                PacketEvaluation {
+                    version_sums: version + inner_version_sums,
+                    value: result,
                 }
-                _ => panic!("Unknown length_type_id {}", length_type_id),
             }
         }
     }
-}
 
-fn get_bits_string(input: &str) -> String {
-    input
-        .trim()
-        .chars()
-        .map(|c| format!("{:04b}", u8::from_str_radix(&c.to_string(), 16).unwrap()))
-        .collect::<String>()
+    fn parse_entire_bit_stream(mut self) -> PacketEvaluation {
+        self.parse_packet()
+    }
 }
 
 fn p1(input: &str) -> String {
-    let bits = get_bits_string(input);
-    read_packet(&bits, 0, bits.len()).0.to_string()
-}
-
-fn read_packet_p2(bits: &str, start: usize, end: usize) -> (u64, usize) {
-    let mut ptr = start;
-
-    let _version = read(bits, ptr, 3);
-    ptr += 3;
-    let type_id = read(bits, ptr, 3);
-    ptr += 3;
-
-    match type_id {
-        4 => {
-            let mut whole_value = 0;
-            loop {
-                let value = read(bits, ptr, 5);
-                whole_value = whole_value * 16 + (value & 15);
-
-                ptr += 5;
-
-                if value & 16 == 0 {
-                    return (whole_value, ptr);
-                }
-            }
-        }
-        _ => {
-            let length_type_id = read(bits, ptr, 1);
-            ptr += 1;
-
-            let mut inner_values = vec![];
-
-            match length_type_id {
-                0 => {
-                    let total_length_bits = read(bits, ptr, 15) as usize;
-                    ptr += 15;
-                    let end = ptr + total_length_bits;
-
-                    while ptr != end {
-                        let (inner_value, inner_end) = read_packet_p2(bits, ptr, end);
-                        inner_values.push(inner_value);
-                        ptr = inner_end;
-
-                        if ptr > end {
-                            panic!("Overshot??");
-                        }
-                    }
-                }
-                1 => {
-                    let total_packets = read(bits, ptr, 11);
-                    ptr += 11;
-
-                    (0..total_packets).for_each(|_| {
-                        let (inner_value, inner_end) = read_packet_p2(bits, ptr, end);
-                        inner_values.push(inner_value);
-                        ptr = inner_end;
-
-                        if ptr > end {
-                            panic!("Overshot??");
-                        }
-                    });
-                }
-                _ => panic!("Unknown length_type_id {}", length_type_id),
-            }
-
-            let result = match type_id {
-                0 => inner_values.into_iter().sum(),
-                1 => inner_values.into_iter().product(),
-                2 => inner_values.into_iter().min().unwrap(),
-                3 => inner_values.into_iter().max().unwrap(),
-                5 => {
-                    if inner_values[0] > inner_values[1] {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                6 => {
-                    if inner_values[0] < inner_values[1] {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                7 => {
-                    if inner_values[0] == inner_values[1] {
-                        1
-                    } else {
-                        0
-                    }
-                }
-                _ => panic!("Unknown type_id {}", type_id),
-            };
-
-            (result, ptr)
-        }
-    }
+    BitStream::from_input(input)
+        .parse_entire_bit_stream()
+        .version_sums
+        .to_string()
 }
 
 fn p2(input: &str) -> String {
-    let bits = get_bits_string(input);
-    read_packet_p2(&bits, 0, bits.len()).0.to_string()
+    BitStream::from_input(input)
+        .parse_entire_bit_stream()
+        .value
+        .to_string()
 }
 
 fn main() {
