@@ -38,7 +38,7 @@ fn simulate(input: &Input, mut vel: (i32, i32)) -> (i32, bool) {
     let mut highest_y = 0;
     let mut pos = (0, 0);
 
-    while pos.0 <= input.max.0 && (vel.1 >= 0 || pos.1 >= input.min.1) {
+    while pos.0 <= input.max.0 && pos.1 >= input.min.1 {
         pos.0 += vel.0;
         pos.1 += vel.1;
 
