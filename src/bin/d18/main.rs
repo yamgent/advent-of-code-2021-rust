@@ -5,7 +5,7 @@ enum SfFlatModified {
     No,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum SfFlatToken {
     Open,
     Number(i32),
@@ -209,8 +209,36 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let numbers = input
+        .trim()
+        .lines()
+        .map(SfFlat::from_line)
+        .collect::<Vec<_>>();
+
+    numbers
+        .iter()
+        .map(|x| {
+            numbers
+                .iter()
+                .map(|y| {
+                    if x == y {
+                        0
+                    } else {
+                        let x = SfFlat {
+                            tokens: x.tokens.clone(),
+                        };
+                        let y = SfFlat {
+                            tokens: y.tokens.clone(),
+                        };
+                        x.add(y).get_magnitude()
+                    }
+                })
+                .max()
+                .unwrap()
+        })
+        .max()
+        .unwrap()
+        .to_string()
 }
 
 fn main() {
@@ -517,12 +545,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "3993");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "4667");
     }
 }
