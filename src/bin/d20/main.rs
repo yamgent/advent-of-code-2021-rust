@@ -40,6 +40,17 @@ fn get_bounds(list: &HashSet<(i32, i32)>) -> Bounds {
     }
 }
 
+// since the actual input's algorithm is such that: for 000000000, it is on,
+// and for 111111111, it is off, therefore, on the 0th, 2nd, 4th, 6th etc
+// iteration the infinite map is actually entirely lit. So the image generated
+// on those iterations by this method is techincally not correct (it will need
+// to store infinite number of coordinates). The 1st, 3rd, 5th etc iteration
+// are ok however (since infinite is off).
+//
+// In other words, if the total  number of iterations are even, then our
+// image is correct (which is what p1 and p2 uses). Otherwise, if the total
+// number of iterations are odd, the final answer is INFINITY (which is
+// impossible to represent in our data structure)
 fn enhance(
     image: &HashSet<(i32, i32)>,
     algorithm: &HashSet<i32>,
