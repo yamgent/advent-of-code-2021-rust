@@ -178,11 +178,13 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "expensive to run"]
     fn test_p2_sample() {
         assert_eq!(p2(SAMPLE_INPUT), "3351");
     }
 
     #[test]
+    #[ignore = "expensive to run"]
     fn test_p2_actual() {
         assert_eq!(p2(ACTUAL_INPUT), "16389");
     }
