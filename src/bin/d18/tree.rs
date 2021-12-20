@@ -1,5 +1,202 @@
+use std::{iter::Peekable, str::Chars};
+
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
+enum SfTreeReduced {
+    Yes,
+    No,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+enum SfNode {
+    Number(i32),
+    Pair {
+        left: Box<SfNode>,
+        right: Box<SfNode>,
+    },
+}
+
+impl SfNode {
+    fn get_size(&self) -> i32 {
+        match self {
+            SfNode::Number(_) => 1,
+            SfNode::Pair { left, right } => left.get_size() + right.get_size(),
+        }
+    }
+
+    fn is_number(&self) -> bool {
+        matches!(self, SfNode::Number(_))
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct SfTree {
+    root: SfNode,
+}
+
+impl SfTree {
+    fn from_line(line: &str) -> Self {
+        fn parse_number(iter: &mut Peekable<Chars>) -> SfNode {
+            let mut number = 0;
+
+            while matches!(iter.peek(), Some('0'..='9')) {
+                number = number * 10 + (iter.next().unwrap() as i32 - '0' as i32);
+            }
+
+            SfNode::Number(number)
+        }
+
+        fn parse_pair(iter: &mut Peekable<Chars>) -> SfNode {
+            fn expect(iter: &mut Peekable<Chars>, expected: char) {
+                let char = iter.next().unwrap();
+                if char != expected {
+                    panic!("Expected '{}', found '{}'", expected, char);
+                }
+            }
+
+            fn parse_part(iter: &mut Peekable<Chars>) -> SfNode {
+                match iter.peek() {
+                    Some('[') => parse_pair(iter),
+                    Some('0'..='9') => parse_number(iter),
+                    Some(c) => panic!("Expected '[' or digit, found '{}'", c),
+                    None => panic!("Expected part, found EOF"),
+                }
+            }
+
+            expect(iter, '[');
+            let left = Box::new(parse_part(iter));
+            expect(iter, ',');
+            let right = Box::new(parse_part(iter));
+            expect(iter, ']');
+
+            SfNode::Pair { left, right }
+        }
+
+        SfTree {
+            root: parse_pair(&mut line.chars().peekable()),
+        }
+    }
+
+    fn get_nth_mut(&mut self, nth: i32) -> Option<&mut SfNode> {
+        fn get_nth_inner(node: &mut SfNode, nth: i32) -> Option<&mut SfNode> {
+            match node {
+                SfNode::Number(_) => {
+                    if nth == 0 {
+                        Some(node)
+                    } else {
+                        None
+                    }
+                }
+                SfNode::Pair { left, right } => {
+                    let left_size = left.get_size();
+                    if nth < left_size {
+                        get_nth_inner(left, nth)
+                    } else {
+                        get_nth_inner(right, nth - left_size)
+                    }
+                }
+            }
+        }
+
+        get_nth_inner(&mut self.root, nth)
+    }
+
+    fn get_nth_parent_mut(&mut self, nth: i32) -> Option<&mut SfNode> {
+        // TODO: Fix this code
+        unimplemented!()
+        /*
+        fn get_nth_inner(node: &mut SfNode, nth: i32) -> Option<&mut SfNode> {
+            let mut current_is_parent = false;
+
+            match node {
+                SfNode::Number(_) => {
+                    // parent is always a pair node, cannot be a number node
+                    return None;
+                }
+                SfNode::Pair { left, right } => {
+                    let left_size = left.get_size();
+
+                    let left_is_number = left.is_number();
+                    let right_is_number = right.is_number();
+
+                    if nth == 0 && left_is_number {
+                        current_is_parent = true;
+                    } else if nth == left_size && right_is_number {
+                        current_is_parent = true;
+                    } else if nth < left_size {
+                        return get_nth_inner(left, nth);
+                    } else {
+                        return get_nth_inner(right, nth - left_size);
+                    }
+                }
+            }
+
+            if current_is_parent {
+                Some(node)
+            } else {
+                None
+            }
+        }
+
+        get_nth_inner(&mut self.root, nth)
+        */
+    }
+
+    fn explode_once(&mut self) -> SfTreeReduced {
+        // TODO: Implement
+        unimplemented!()
+    }
+
+    fn split_once(&mut self) -> SfTreeReduced {
+        fn handle_pair(node: &mut SfNode) -> SfTreeReduced {
+            match node {
+                SfNode::Number(num) => {
+                    if *num >= 10 {
+                        let left = *num / 2;
+                        let right = *num / 2 + *num % 2;
+
+                        *node = SfNode::Pair {
+                            left: Box::new(SfNode::Number(left)),
+                            right: Box::new(SfNode::Number(right)),
+                        };
+
+                        SfTreeReduced::Yes
+                    } else {
+                        SfTreeReduced::No
+                    }
+                }
+                SfNode::Pair { left, right } => {
+                    if let SfTreeReduced::Yes = handle_pair(left) {
+                        return SfTreeReduced::Yes;
+                    }
+
+                    handle_pair(right)
+                }
+            }
+        }
+
+        handle_pair(&mut self.root)
+    }
+
+    fn add(mut self, mut another: SfTree) -> SfTree {
+        // TODO: Implement
+        unimplemented!()
+    }
+
+    fn get_magnitude(&self) -> i32 {
+        fn get_inner(node: &SfNode, multiplier: i32) -> i32 {
+            multiplier
+                * match node {
+                    SfNode::Number(num) => *num,
+                    SfNode::Pair { left, right } => get_inner(left, 3) + get_inner(right, 2),
+                }
+        }
+
+        get_inner(&self.root, 1)
+    }
+}
+
+// TODO: Clean below
 enum SfFlatModified {
     Yes,
     No,
@@ -251,87 +448,199 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sfflattoken_number() {
-        assert_eq!(SfFlatToken::Open.number(), None);
-        assert_eq!(SfFlatToken::Number(42).number(), Some(42));
-        assert_eq!(SfFlatToken::Close.number(), None);
+    fn test_sfnode_get_size() {
+        assert_eq!(SfNode::Number(3).get_size(), 1);
+        assert_eq!(
+            SfNode::Pair {
+                left: Box::new(SfNode::Number(2)),
+                right: Box::new(SfNode::Pair {
+                    left: Box::new(SfNode::Number(1)),
+                    right: Box::new(SfNode::Number(3))
+                })
+            }
+            .get_size(),
+            3
+        );
     }
 
     #[test]
-    fn test_sfflat_from_line() {
+    fn test_sftree_from_line() {
         assert_eq!(
-            SfFlat::from_line("[1,2]"),
-            SfFlat {
-                tokens: vec![
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(1),
-                    SfFlatToken::Number(2),
-                    SfFlatToken::Close
-                ]
+            SfTree::from_line("[1,2]"),
+            SfTree {
+                root: SfNode::Pair {
+                    left: Box::new(SfNode::Number(1)),
+                    right: Box::new(SfNode::Number(2)),
+                }
             }
         );
 
         assert_eq!(
-            SfFlat::from_line("[9,[8,7]]"),
-            SfFlat {
-                tokens: vec![
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(9),
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(8),
-                    SfFlatToken::Number(7),
-                    SfFlatToken::Close,
-                    SfFlatToken::Close,
-                ]
+            SfTree::from_line("[9,[8,7]]"),
+            SfTree {
+                root: SfNode::Pair {
+                    left: Box::new(SfNode::Number(9)),
+                    right: Box::new(SfNode::Pair {
+                        left: Box::new(SfNode::Number(8)),
+                        right: Box::new(SfNode::Number(7)),
+                    })
+                }
             }
         );
 
         assert_eq!(
-            SfFlat::from_line("[[1,2],3]"),
-            SfFlat {
-                tokens: vec![
-                    SfFlatToken::Open,
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(1),
-                    SfFlatToken::Number(2),
-                    SfFlatToken::Close,
-                    SfFlatToken::Number(3),
-                    SfFlatToken::Close,
-                ]
+            SfTree::from_line("[[1,2],3]"),
+            SfTree {
+                root: SfNode::Pair {
+                    left: Box::new(SfNode::Pair {
+                        left: Box::new(SfNode::Number(1)),
+                        right: Box::new(SfNode::Number(2)),
+                    }),
+                    right: Box::new(SfNode::Number(3))
+                }
             }
         );
 
         assert_eq!(
-            SfFlat::from_line("[[1,9],[8,5]]"),
-            SfFlat {
-                tokens: vec![
-                    SfFlatToken::Open,
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(1),
-                    SfFlatToken::Number(9),
-                    SfFlatToken::Close,
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(8),
-                    SfFlatToken::Number(5),
-                    SfFlatToken::Close,
-                    SfFlatToken::Close,
-                ]
+            SfTree::from_line("[[1,9],[8,5]]"),
+            SfTree {
+                root: SfNode::Pair {
+                    left: Box::new(SfNode::Pair {
+                        left: Box::new(SfNode::Number(1)),
+                        right: Box::new(SfNode::Number(9))
+                    }),
+                    right: Box::new(SfNode::Pair {
+                        left: Box::new(SfNode::Number(8)),
+                        right: Box::new(SfNode::Number(5))
+                    })
+                }
             }
         );
 
         // while input won't have double-digit numbers,
         // our test cases does have such numbers
         assert_eq!(
-            SfFlat::from_line("[12,345]"),
-            SfFlat {
-                tokens: vec![
-                    SfFlatToken::Open,
-                    SfFlatToken::Number(12),
-                    SfFlatToken::Number(345),
-                    SfFlatToken::Close,
-                ]
+            SfTree::from_line("[12,345]"),
+            SfTree {
+                root: SfNode::Pair {
+                    left: Box::new(SfNode::Number(12)),
+                    right: Box::new(SfNode::Number(345))
+                }
             }
         )
+    }
+
+    #[test]
+    fn test_sftree_get_nth_mut() {
+        // this test assumes that SfTree::from_line() is working correctly
+        let mut tree = SfTree::from_line("[[1,[2,3]],[[4,5],6]]");
+        assert_eq!(tree.get_nth_mut(-1), None);
+        assert_eq!(tree.get_nth_mut(0), Some(&mut SfNode::Number(1)));
+        assert_eq!(tree.get_nth_mut(1), Some(&mut SfNode::Number(2)));
+        assert_eq!(tree.get_nth_mut(2), Some(&mut SfNode::Number(3)));
+        assert_eq!(tree.get_nth_mut(3), Some(&mut SfNode::Number(4)));
+        assert_eq!(tree.get_nth_mut(4), Some(&mut SfNode::Number(5)));
+        assert_eq!(tree.get_nth_mut(5), Some(&mut SfNode::Number(6)));
+        assert_eq!(tree.get_nth_mut(6), None);
+    }
+
+    #[test]
+    fn test_sftree_get_nth_parent_mut() {
+        // this test assumes that SfTree::from_line() is working correctly
+        let mut tree = SfTree::from_line("[[1,[2,3]],[[4,5],6]]");
+        assert_eq!(tree.get_nth_parent_mut(-1), None);
+        assert_eq!(
+            tree.get_nth_parent_mut(0),
+            Some(&mut SfTree::from_line("[1,[2,3]]").root)
+        );
+        assert_eq!(
+            tree.get_nth_parent_mut(1),
+            Some(&mut SfTree::from_line("[2,3]").root)
+        );
+        assert_eq!(
+            tree.get_nth_parent_mut(2),
+            Some(&mut SfTree::from_line("[2,3]").root)
+        );
+        assert_eq!(
+            tree.get_nth_parent_mut(3),
+            Some(&mut SfTree::from_line("[4,5]").root)
+        );
+        assert_eq!(
+            tree.get_nth_parent_mut(4),
+            Some(&mut SfTree::from_line("[4,5]").root)
+        );
+        assert_eq!(
+            tree.get_nth_parent_mut(5),
+            Some(&mut SfTree::from_line("[[4,5],6]").root)
+        );
+        assert_eq!(tree.get_nth_parent_mut(6), None);
+    }
+
+    #[test]
+    fn test_sftree_split_once() {
+        // this test assumes that SfTree::from_line() is working correctly
+        [
+            ("[10,1]", "[[5,5],1]"),
+            ("[11,1]", "[[5,6],1]"),
+            (
+                "[[[[0,7],4],[15,[0,13]]],[1,1]]",
+                "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]",
+            ),
+            (
+                "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]",
+                "[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]",
+            ),
+        ]
+        .into_iter()
+        .for_each(|(input_line, expected_output_line)| {
+            let mut input = SfTree::from_line(input_line);
+            let expected_output = SfTree::from_line(expected_output_line);
+
+            let result = input.split_once();
+
+            assert!(
+                matches!(result, SfTreeReduced::Yes),
+                "{} did not split",
+                input_line
+            );
+            assert_eq!(input, expected_output, "{} split wrongly", input_line);
+        });
+    }
+
+    #[test]
+    fn test_sftree_get_magnitude() {
+        // this test assumes that SfTree::from_line() is working correctly
+        [
+            ("[9,1]", 29),
+            ("[1,9]", 21),
+            ("[[9,1],[1,9]]", 129),
+            ("[[1,2],[[3,4],5]]", 143),
+            ("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", 1384),
+            ("[[[[1,1],[2,2]],[3,3]],[4,4]]", 445),
+            ("[[[[3,0],[5,3]],[4,4]],[5,5]]", 791),
+            ("[[[[5,0],[7,4]],[5,5]],[6,6]]", 1137),
+            (
+                "[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]",
+                3488,
+            ),
+        ]
+        .into_iter()
+        .for_each(|(input_line, expected_mag)| {
+            assert_eq!(
+                SfTree::from_line(input_line).get_magnitude(),
+                expected_mag,
+                "{} magnitude is wrong",
+                input_line
+            );
+        })
+    }
+
+    // TODO: Clean below
+    #[test]
+    fn test_sfflattoken_number() {
+        assert_eq!(SfFlatToken::Open.number(), None);
+        assert_eq!(SfFlatToken::Number(42).number(), Some(42));
+        assert_eq!(SfFlatToken::Close.number(), None);
     }
 
     #[test]
@@ -365,41 +674,6 @@ mod tests {
             assert_eq!(
                 input.tokens, expected_output.tokens,
                 "{} exploded wrongly",
-                input_line
-            );
-        });
-    }
-
-    #[test]
-    fn test_sfflat_split_once() {
-        // this test assumes that SfFlat::from_line() is working correctly
-        [
-            ("[10,1]", "[[5,5],1]"),
-            ("[11,1]", "[[5,6],1]"),
-            (
-                "[[[[0,7],4],[15,[0,13]]],[1,1]]",
-                "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]",
-            ),
-            (
-                "[[[[0,7],4],[[7,8],[0,13]]],[1,1]]",
-                "[[[[0,7],4],[[7,8],[0,[6,7]]]],[1,1]]",
-            ),
-        ]
-        .into_iter()
-        .for_each(|(input_line, expected_output_line)| {
-            let mut input = SfFlat::from_line(input_line);
-            let expected_output = SfFlat::from_line(expected_output_line);
-
-            let result = SfFlat::split_once(&mut input.tokens);
-
-            assert!(
-                matches!(result, SfFlatModified::Yes),
-                "{} did not split",
-                input_line
-            );
-            assert_eq!(
-                input.tokens, expected_output.tokens,
-                "{} split wrongly",
                 input_line
             );
         });
@@ -490,34 +764,6 @@ mod tests {
                 expected_output_line
             );
         });
-    }
-
-    #[test]
-    fn test_sfnumber_get_magnitude() {
-        // this test assumes that SfFlat::from_line() is working correctly
-        [
-            ("[9,1]", 29),
-            ("[1,9]", 21),
-            ("[[9,1],[1,9]]", 129),
-            ("[[1,2],[[3,4],5]]", 143),
-            ("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]", 1384),
-            ("[[[[1,1],[2,2]],[3,3]],[4,4]]", 445),
-            ("[[[[3,0],[5,3]],[4,4]],[5,5]]", 791),
-            ("[[[[5,0],[7,4]],[5,5]],[6,6]]", 1137),
-            (
-                "[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]",
-                3488,
-            ),
-        ]
-        .into_iter()
-        .for_each(|(input_line, expected_mag)| {
-            assert_eq!(
-                SfFlat::from_line(input_line).get_magnitude(),
-                expected_mag,
-                "{} magnitude is wrong",
-                input_line
-            );
-        })
     }
 
     const SAMPLE_INPUT: &str = r"
