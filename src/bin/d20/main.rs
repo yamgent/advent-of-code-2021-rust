@@ -92,7 +92,7 @@ fn print_image(image: &HashSet<(i32, i32)>) {
     });
 }
 
-fn p1(input: &str) -> String {
+fn solve(input: &str, total_iterations: usize) -> String {
     let (algorithm, image) = input.trim().split_once("\n\n").unwrap();
 
     let algorithm: HashSet<i32> = HashSet::from_iter(
@@ -103,7 +103,7 @@ fn p1(input: &str) -> String {
             .map(|(i, _)| i as i32),
     );
 
-    let image: HashSet<(i32, i32)> =
+    let mut image: HashSet<(i32, i32)> =
         HashSet::from_iter(image.lines().enumerate().flat_map(|(y, line)| {
             line.chars()
                 .enumerate()
@@ -112,15 +112,19 @@ fn p1(input: &str) -> String {
                 .collect::<Vec<_>>()
         }));
 
-    let image = enhance(&image, &algorithm, 0);
-    let image = enhance(&image, &algorithm, 1);
+    (0..total_iterations).for_each(|i| {
+        image = enhance(&image, &algorithm, i);
+    });
 
     image.len().to_string()
 }
 
+fn p1(input: &str) -> String {
+    solve(input, 2)
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    solve(input, 50)
 }
 
 fn main() {
@@ -175,12 +179,11 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "3351");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "16389");
     }
 }
