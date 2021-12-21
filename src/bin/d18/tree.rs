@@ -2,6 +2,7 @@ use std::{iter::Peekable, str::Chars};
 
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
+#[derive(PartialEq, Eq, Debug)]
 enum SfTreeReduced {
     Yes,
     No,
@@ -101,50 +102,89 @@ impl SfTree {
         get_nth_inner(&mut self.root, nth)
     }
 
-    fn get_nth_parent_mut(&mut self, nth: i32) -> Option<&mut SfNode> {
-        // TODO: Fix this code
-        unimplemented!()
-        /*
-        fn get_nth_inner(node: &mut SfNode, nth: i32) -> Option<&mut SfNode> {
-            let mut current_is_parent = false;
-
+    fn make_nth_parent_zero(&mut self, nth: i32) -> SfTreeReduced {
+        fn zero_inner(node: &mut SfNode, nth: i32) -> SfTreeReduced {
             match node {
-                SfNode::Number(_) => {
-                    // parent is always a pair node, cannot be a number node
-                    return None;
-                }
+                SfNode::Number(_) => SfTreeReduced::No,
                 SfNode::Pair { left, right } => {
                     let left_size = left.get_size();
 
                     let left_is_number = left.is_number();
                     let right_is_number = right.is_number();
 
-                    if nth == 0 && left_is_number {
-                        current_is_parent = true;
-                    } else if nth == left_size && right_is_number {
-                        current_is_parent = true;
+                    if nth == 0 && left_is_number || nth == left_size && right_is_number {
+                        *node = SfNode::Number(0);
+                        SfTreeReduced::Yes
                     } else if nth < left_size {
-                        return get_nth_inner(left, nth);
+                        zero_inner(left, nth)
                     } else {
-                        return get_nth_inner(right, nth - left_size);
+                        zero_inner(right, nth - left_size)
                     }
                 }
             }
-
-            if current_is_parent {
-                Some(node)
-            } else {
-                None
-            }
         }
 
-        get_nth_inner(&mut self.root, nth)
-        */
+        zero_inner(&mut self.root, nth)
     }
 
     fn explode_once(&mut self) -> SfTreeReduced {
-        // TODO: Implement
-        unimplemented!()
+        fn get_offending_pair_first_index(
+            node: &SfNode,
+            left_most_index: i32,
+            level: i32,
+        ) -> Option<i32> {
+            if level == 5 {
+                Some(left_most_index)
+            } else {
+                match node {
+                    SfNode::Number(_) => None,
+                    SfNode::Pair { left, right } => {
+                        let left_size = left.get_size();
+                        let left_result =
+                            get_offending_pair_first_index(left, left_most_index, level + 1);
+
+                        if left_result.is_some() {
+                            left_result
+                        } else {
+                            get_offending_pair_first_index(
+                                right,
+                                left_most_index + left_size,
+                                level + 1,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        match get_offending_pair_first_index(&self.root, 0, 0) {
+            None => SfTreeReduced::No,
+            Some(index) => {
+                // TODO: Refactor?
+                let pair_left = match self.get_nth_mut(index).unwrap() {
+                    SfNode::Pair { .. } => panic!("Expected number"),
+                    SfNode::Number(num) => *num,
+                };
+                let pair_right = match self.get_nth_mut(index + 1).unwrap() {
+                    SfNode::Pair { .. } => panic!("Expected number"),
+                    SfNode::Number(num) => *num,
+                };
+
+                match self.get_nth_mut(index - 1) {
+                    None => {}
+                    Some(SfNode::Number(num)) => *num += pair_left,
+                    Some(SfNode::Pair { .. }) => panic!("Expected number"),
+                }
+                match self.get_nth_mut(index + 2) {
+                    None => {}
+                    Some(SfNode::Number(num)) => *num += pair_right,
+                    Some(SfNode::Pair { .. }) => panic!("Expected number"),
+                }
+
+                self.make_nth_parent_zero(index);
+                SfTreeReduced::Yes
+            }
+        }
     }
 
     fn split_once(&mut self) -> SfTreeReduced {
@@ -178,9 +218,25 @@ impl SfTree {
         handle_pair(&mut self.root)
     }
 
-    fn add(mut self, mut another: SfTree) -> SfTree {
-        // TODO: Implement
-        unimplemented!()
+    fn add(self, another: SfTree) -> SfTree {
+        let mut new_tree = SfTree {
+            root: SfNode::Pair {
+                left: Box::new(self.root),
+                right: Box::new(another.root),
+            },
+        };
+
+        loop {
+            if let SfTreeReduced::Yes = new_tree.explode_once() {
+                continue;
+            }
+
+            if let SfTreeReduced::Yes = new_tree.split_once() {
+                continue;
+            }
+
+            return new_tree;
+        }
     }
 
     fn get_magnitude(&self) -> i32 {
@@ -196,209 +252,11 @@ impl SfTree {
     }
 }
 
-// TODO: Clean below
-enum SfFlatModified {
-    Yes,
-    No,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum SfFlatToken {
-    Open,
-    Number(i32),
-    Close,
-}
-
-impl SfFlatToken {
-    fn number(&self) -> Option<i32> {
-        match self {
-            SfFlatToken::Number(num) => Some(*num),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct SfFlat {
-    tokens: Vec<SfFlatToken>,
-}
-
-impl SfFlat {
-    fn from_line(line: &str) -> Self {
-        let mut tokens = vec![];
-        let mut current_number = None;
-
-        for c in line.chars() {
-            match c {
-                '[' => tokens.push(SfFlatToken::Open),
-                '0'..='9' => {
-                    let digit = c as i32 - '0' as i32;
-                    current_number = Some(match current_number {
-                        None => digit,
-                        Some(num) => num * 10 + digit,
-                    });
-                }
-                ']' => {
-                    if let Some(number) = current_number {
-                        tokens.push(SfFlatToken::Number(number));
-                        current_number = None;
-                    }
-                    tokens.push(SfFlatToken::Close);
-                }
-                ',' => {
-                    if let Some(number) = current_number {
-                        tokens.push(SfFlatToken::Number(number));
-                        current_number = None;
-                    }
-                }
-                _ => panic!("Illegal char '{}'", c),
-            }
-        }
-
-        if current_number.is_some() {
-            panic!("Numbers outside a pair");
-        }
-
-        Self { tokens }
-    }
-
-    fn explode_once(tokens: &mut Vec<SfFlatToken>) -> SfFlatModified {
-        let mut offending_pair_indices = None;
-
-        {
-            let mut level = 0;
-            for (i, t) in tokens.iter().enumerate() {
-                match *t {
-                    SfFlatToken::Open => level += 1,
-                    SfFlatToken::Close => level -= 1,
-                    _ => {}
-                }
-
-                if level == 5 {
-                    offending_pair_indices = Some((i + 1, i + 2));
-                    break;
-                }
-            }
-        }
-
-        match offending_pair_indices {
-            None => SfFlatModified::No,
-            Some((pair_left_index, pair_right_index)) => {
-                let pair_left = tokens[pair_left_index].number().unwrap();
-                let pair_right = tokens[pair_right_index].number().unwrap();
-
-                for token in tokens.iter_mut().take(pair_left_index).rev() {
-                    if let SfFlatToken::Number(num) = token {
-                        *num += pair_left;
-                        break;
-                    }
-                }
-
-                for token in tokens.iter_mut().skip(pair_right_index + 1) {
-                    if let SfFlatToken::Number(num) = token {
-                        *num += pair_right;
-                        break;
-                    }
-                }
-
-                tokens[pair_left_index - 1] = SfFlatToken::Number(0);
-
-                // delete 'pair_left', 'pair_right', ']'
-                for _ in 0..3 {
-                    tokens.remove(pair_left_index);
-                }
-
-                SfFlatModified::Yes
-            }
-        }
-    }
-
-    fn split_once(tokens: &mut Vec<SfFlatToken>) -> SfFlatModified {
-        let mut offending_number_index = None;
-
-        for (i, t) in tokens.iter().enumerate() {
-            if let SfFlatToken::Number(num) = t {
-                if *num >= 10 {
-                    offending_number_index = Some(i);
-                    break;
-                }
-            }
-        }
-
-        match offending_number_index {
-            None => SfFlatModified::No,
-            Some(index) => {
-                let num = tokens[index].number().unwrap();
-                tokens.remove(index);
-
-                let left = num / 2;
-                let right = num / 2 + num % 2;
-
-                // insert the new pair in reverse, because we only have the
-                // start index to work with
-                tokens.insert(index, SfFlatToken::Close);
-                tokens.insert(index, SfFlatToken::Number(right));
-                tokens.insert(index, SfFlatToken::Number(left));
-                tokens.insert(index, SfFlatToken::Open);
-
-                SfFlatModified::Yes
-            }
-        }
-    }
-
-    fn add(mut self, mut another: SfFlat) -> SfFlat {
-        let mut tokens = vec![SfFlatToken::Open];
-        tokens.append(&mut self.tokens);
-        tokens.append(&mut another.tokens);
-        tokens.push(SfFlatToken::Close);
-
-        loop {
-            if let SfFlatModified::Yes = SfFlat::explode_once(&mut tokens) {
-                continue;
-            }
-
-            if let SfFlatModified::Yes = SfFlat::split_once(&mut tokens) {
-                continue;
-            }
-
-            return SfFlat { tokens };
-        }
-    }
-
-    fn get_magnitude(&self) -> i32 {
-        let mut tokens = self.tokens.clone();
-
-        while tokens.len() != 1 {
-            let (pair_start_index, _) = tokens
-                .iter()
-                .zip(tokens.iter().skip(1))
-                .enumerate()
-                .find(|(_, (a, b))| a.number().is_some() && b.number().is_some())
-                .unwrap();
-
-            let pair_left = tokens[pair_start_index].number().unwrap();
-            let pair_right = tokens[pair_start_index + 1].number().unwrap();
-
-            let mag = 3 * pair_left + 2 * pair_right;
-
-            // delete the entire pair ('[', 'left', 'right', ']')
-            for _ in 0..4 {
-                tokens.remove(pair_start_index - 1);
-            }
-
-            // insert mag
-            tokens.insert(pair_start_index - 1, SfFlatToken::Number(mag));
-        }
-
-        tokens[0].number().unwrap()
-    }
-}
-
 fn p1(input: &str) -> String {
     input
         .trim()
         .lines()
-        .map(SfFlat::from_line)
+        .map(SfTree::from_line)
         .reduce(|acc, current| acc.add(current))
         .unwrap()
         .get_magnitude()
@@ -406,11 +264,7 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let numbers = input
-        .trim()
-        .lines()
-        .map(SfFlat::from_line)
-        .collect::<Vec<_>>();
+    let numbers = input.trim().lines().collect::<Vec<_>>();
 
     numbers
         .iter()
@@ -421,12 +275,8 @@ fn p2(input: &str) -> String {
                     if x == y {
                         0
                     } else {
-                        let x = SfFlat {
-                            tokens: x.tokens.clone(),
-                        };
-                        let y = SfFlat {
-                            tokens: y.tokens.clone(),
-                        };
+                        let x = SfTree::from_line(x);
+                        let y = SfTree::from_line(y);
                         x.add(y).get_magnitude()
                     }
                 })
@@ -545,35 +395,66 @@ mod tests {
     }
 
     #[test]
-    fn test_sftree_get_nth_parent_mut() {
+    fn test_sftree_make_nth_parent_zero() {
+        let initial_tree_line = "[[1,[2,3]],[[4,5],6]]";
         // this test assumes that SfTree::from_line() is working correctly
-        let mut tree = SfTree::from_line("[[1,[2,3]],[[4,5],6]]");
-        assert_eq!(tree.get_nth_parent_mut(-1), None);
-        assert_eq!(
-            tree.get_nth_parent_mut(0),
-            Some(&mut SfTree::from_line("[1,[2,3]]").root)
-        );
-        assert_eq!(
-            tree.get_nth_parent_mut(1),
-            Some(&mut SfTree::from_line("[2,3]").root)
-        );
-        assert_eq!(
-            tree.get_nth_parent_mut(2),
-            Some(&mut SfTree::from_line("[2,3]").root)
-        );
-        assert_eq!(
-            tree.get_nth_parent_mut(3),
-            Some(&mut SfTree::from_line("[4,5]").root)
-        );
-        assert_eq!(
-            tree.get_nth_parent_mut(4),
-            Some(&mut SfTree::from_line("[4,5]").root)
-        );
-        assert_eq!(
-            tree.get_nth_parent_mut(5),
-            Some(&mut SfTree::from_line("[[4,5],6]").root)
-        );
-        assert_eq!(tree.get_nth_parent_mut(6), None);
+        [
+            (-1, "[[1,[2,3]],[[4,5],6]]"),
+            (0, "[0,[[4,5],6]]"),
+            (1, "[[1,0],[[4,5],6]]"),
+            (2, "[[1,0],[[4,5],6]]"),
+            (3, "[[1,[2,3]],[0,6]]"),
+            (4, "[[1,[2,3]],[0,6]]"),
+            (5, "[[1,[2,3]],0]"),
+            (6, "[[1,[2,3]],[[4,5],6]]"),
+        ]
+        .into_iter()
+        .for_each(|(input_nth, output_tree_line)| {
+            let mut initial_tree = SfTree::from_line(initial_tree_line);
+            let output_tree = SfTree::from_line(output_tree_line);
+
+            assert_eq!(
+                initial_tree.make_nth_parent_zero(input_nth),
+                if initial_tree_line == output_tree_line {
+                    SfTreeReduced::No
+                } else {
+                    SfTreeReduced::Yes
+                }
+            );
+            assert_eq!(initial_tree, output_tree);
+        });
+    }
+
+    #[test]
+    fn test_sftree_explode_once() {
+        // this test assumes that SfTree::from_line() is working correctly
+        [
+            ("[[[[[9,8],1],2],3],4]", "[[[[0,9],2],3],4]"),
+            ("[7,[6,[5,[4,[3,2]]]]]", "[7,[6,[5,[7,0]]]]"),
+            ("[[6,[5,[4,[3,2]]]],1]", "[[6,[5,[7,0]]],3]"),
+            (
+                "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]",
+                "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]",
+            ),
+            (
+                "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]",
+                "[[3,[2,[8,0]]],[9,[5,[7,0]]]]",
+            ),
+        ]
+        .into_iter()
+        .for_each(|(input_line, expected_output_line)| {
+            let mut input = SfTree::from_line(input_line);
+            let expected_output = SfTree::from_line(expected_output_line);
+
+            let result = input.explode_once();
+
+            assert!(
+                matches!(result, SfTreeReduced::Yes),
+                "{} did not explode",
+                input_line
+            );
+            assert_eq!(input, expected_output, "{} exploded wrongly", input_line);
+        });
     }
 
     #[test]
@@ -635,71 +516,27 @@ mod tests {
         })
     }
 
-    // TODO: Clean below
     #[test]
-    fn test_sfflattoken_number() {
-        assert_eq!(SfFlatToken::Open.number(), None);
-        assert_eq!(SfFlatToken::Number(42).number(), Some(42));
-        assert_eq!(SfFlatToken::Close.number(), None);
-    }
-
-    #[test]
-    fn test_sfflat_explode_once() {
-        // this test assumes that SfFlat::from_line() is working correctly
-        [
-            ("[[[[[9,8],1],2],3],4]", "[[[[0,9],2],3],4]"),
-            ("[7,[6,[5,[4,[3,2]]]]]", "[7,[6,[5,[7,0]]]]"),
-            ("[[6,[5,[4,[3,2]]]],1]", "[[6,[5,[7,0]]],3]"),
-            (
-                "[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]",
-                "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]",
-            ),
-            (
-                "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]",
-                "[[3,[2,[8,0]]],[9,[5,[7,0]]]]",
-            ),
-        ]
-        .into_iter()
-        .for_each(|(input_line, expected_output_line)| {
-            let mut input = SfFlat::from_line(input_line);
-            let expected_output = SfFlat::from_line(expected_output_line);
-
-            let result = SfFlat::explode_once(&mut input.tokens);
-
-            assert!(
-                matches!(result, SfFlatModified::Yes),
-                "{} did not explode",
-                input_line
-            );
-            assert_eq!(
-                input.tokens, expected_output.tokens,
-                "{} exploded wrongly",
-                input_line
-            );
-        });
-    }
-
-    #[test]
-    fn test_sfflat_add_no_reduce_needed() {
-        // this test assumes that SfFlat::from_line() is working correctly
+    fn test_sftree_add_no_reduce_needed() {
+        // this test assumes that SfTree::from_line() is working correctly
         assert_eq!(
-            SfFlat::from_line("[1,2]").add(SfFlat::from_line("[[3,4],5]")),
-            SfFlat::from_line("[[1,2],[[3,4],5]]")
+            SfTree::from_line("[1,2]").add(SfTree::from_line("[[3,4],5]")),
+            SfTree::from_line("[[1,2],[[3,4],5]]")
         );
     }
 
     #[test]
-    fn test_sfflat_add_with_reduce() {
-        // this test assumes that SfFlat::from_line() is working correctly
+    fn test_sftree_add_with_reduce() {
+        // this test assumes that SfTree::from_line() is working correctly
         assert_eq!(
-            SfFlat::from_line("[[[[4,3],4],4],[7,[[8,4],9]]]").add(SfFlat::from_line("[1,1]")),
-            SfFlat::from_line("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]")
+            SfTree::from_line("[[[[4,3],4],4],[7,[[8,4],9]]]").add(SfTree::from_line("[1,1]")),
+            SfTree::from_line("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]")
         );
     }
 
     #[test]
-    fn test_sfflat_add_multiple() {
-        // this test assumes that SfFlat::from_line() is working correctly
+    fn test_sftree_add_multiple() {
+        // this test assumes that SfTree::from_line() is working correctly
         [
             (
                 r"
@@ -749,12 +586,12 @@ mod tests {
         ]
         .into_iter()
         .for_each(|(inputs, expected_output_line)| {
-            let expected_output = SfFlat::from_line(expected_output_line);
+            let expected_output = SfTree::from_line(expected_output_line);
 
             let result = inputs
                 .trim()
                 .lines()
-                .map(SfFlat::from_line)
+                .map(SfTree::from_line)
                 .reduce(|acc, sf| acc.add(sf))
                 .unwrap();
 
