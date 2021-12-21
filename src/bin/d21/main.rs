@@ -18,12 +18,12 @@ fn parse_input(input: &str) -> Vec<i32> {
         .collect()
 }
 
-struct Die {
+struct P1Die {
     value: i32,
     roll_count: i32,
 }
 
-impl Die {
+impl P1Die {
     fn new() -> Self {
         Self {
             value: 0,
@@ -38,17 +38,17 @@ impl Die {
     }
 }
 
-struct Player {
+struct P1Player {
     pos: i32,
     score: i32,
 }
 
-impl Player {
+impl P1Player {
     fn new(pos: i32) -> Self {
         Self { pos, score: 0 }
     }
 
-    fn roll_and_move(&mut self, die: &mut Die) -> bool {
+    fn roll_and_move(&mut self, die: &mut P1Die) -> bool {
         let total_moves = (0..3).map(|_| die.roll()).sum::<i32>();
         self.pos = (self.pos + total_moves) % 10;
         self.score += self.pos + 1;
@@ -59,8 +59,8 @@ impl Player {
 fn p1(input: &str) -> String {
     let input = parse_input(input);
 
-    let mut player = [Player::new(input[0]), Player::new(input[1])];
-    let mut die = Die::new();
+    let mut player = [P1Player::new(input[0]), P1Player::new(input[1])];
+    let mut die = P1Die::new();
 
     loop {
         if player[0].roll_and_move(&mut die) {
@@ -73,6 +73,33 @@ fn p1(input: &str) -> String {
     }
 }
 
+#[derive(Hash, PartialEq, Eq)]
+struct P2State {
+    pos: [i32; 2],
+    scores: [i32; 2],
+}
+
+impl P2State {
+    fn advance(&self, roll: i32, is_player_1_turn: bool) -> Self {
+        let player_index = if is_player_1_turn { 0 } else { 1 };
+        let mut pos = self.pos.clone();
+        let mut scores = self.scores.clone();
+
+        pos[player_index] = (pos[player_index] + roll) % 10;
+        scores[player_index] += pos[player_index] + 1;
+
+        Self { pos, scores }
+    }
+
+    fn player_1_won(&self) -> bool {
+        self.scores[0] >= 21
+    }
+
+    fn player_2_won(&self) -> bool {
+        self.scores[1] >= 21
+    }
+}
+
 fn p2(input: &str) -> String {
     let input = parse_input(input);
 
@@ -81,45 +108,43 @@ fn p2(input: &str) -> String {
         (1..=3).for_each(|die2| {
             (1..=3).for_each(|die3| {
                 let total = die1 + die2 + die3;
-                *roll_distribution.entry(total).or_insert(0u64) += 1;
+                *roll_distribution.entry(total).or_insert(0) += 1;
             });
         });
     });
 
-    let mut scores = HashMap::new();
-    let mut currently_player1 = true;
+    let mut states = HashMap::new();
+    let mut currently_player_1 = true;
     let mut wins = [0u64, 0];
 
-    scores.insert((input[0], input[1], 0, 0), 1u64);
+    states.insert(
+        P2State {
+            pos: [input[0], input[1]],
+            scores: [0, 0],
+        },
+        1u64,
+    );
 
-    while !scores.is_empty() {
-        let mut new_scores = HashMap::new();
-        scores
-            .into_iter()
-            .for_each(|((pos1, pos2, score1, score2), count)| {
-                roll_distribution.iter().for_each(|(roll, roll_count)| {
-                    let mut new_score = (pos1, pos2, score1, score2);
+    while !states.is_empty() {
+        let mut new_states = HashMap::new();
 
-                    if currently_player1 {
-                        new_score.0 = (new_score.0 + roll) % 10;
-                        new_score.2 += new_score.0 + 1;
-                    } else {
-                        new_score.1 = (new_score.1 + roll) % 10;
-                        new_score.3 += new_score.1 + 1;
-                    }
+        states.into_iter().for_each(|(state, count)| {
+            roll_distribution.iter().for_each(|(roll, roll_count)| {
+                let new_state = state.advance(*roll, currently_player_1);
+                let new_count = count * roll_count;
 
-                    let new_count = count * roll_count;
-                    if new_score.2 >= 21 {
-                        wins[0] += new_count;
-                    } else if new_score.3 >= 21 {
-                        wins[1] += new_count;
-                    } else {
-                        *new_scores.entry(new_score).or_insert(0u64) += new_count;
-                    }
-                });
+                if new_state.player_1_won() {
+                    wins[0] += new_count;
+                } else if new_state.player_2_won() {
+                    wins[1] += new_count;
+                } else {
+                    *new_states.entry(new_state).or_insert(0u64) += new_count;
+                }
             });
-        scores = new_scores;
-        currently_player1 = !currently_player1;
+        });
+
+        states = new_states;
+        currently_player_1 = !currently_player_1;
     }
 
     wins.into_iter().max().unwrap().to_string()
