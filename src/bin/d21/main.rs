@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 const ACTUAL_INPUT: &str = include_str!("input.txt");
 
 fn parse_input(input: &str) -> Vec<i32> {
@@ -72,8 +74,55 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let input = parse_input(input);
+
+    let mut roll_distribution = HashMap::new();
+    (1..=3).for_each(|die1| {
+        (1..=3).for_each(|die2| {
+            (1..=3).for_each(|die3| {
+                let total = die1 + die2 + die3;
+                *roll_distribution.entry(total).or_insert(0u64) += 1;
+            });
+        });
+    });
+
+    let mut scores = HashMap::new();
+    let mut currently_player1 = true;
+    let mut wins = [0u64, 0];
+
+    scores.insert((input[0], input[1], 0, 0), 1u64);
+
+    while !scores.is_empty() {
+        let mut new_scores = HashMap::new();
+        scores
+            .into_iter()
+            .for_each(|((pos1, pos2, score1, score2), count)| {
+                roll_distribution.iter().for_each(|(roll, roll_count)| {
+                    let mut new_score = (pos1, pos2, score1, score2);
+
+                    if currently_player1 {
+                        new_score.0 = (new_score.0 + roll) % 10;
+                        new_score.2 += new_score.0 + 1;
+                    } else {
+                        new_score.1 = (new_score.1 + roll) % 10;
+                        new_score.3 += new_score.1 + 1;
+                    }
+
+                    let new_count = count * roll_count;
+                    if new_score.2 >= 21 {
+                        wins[0] += new_count;
+                    } else if new_score.3 >= 21 {
+                        wins[1] += new_count;
+                    } else {
+                        *new_scores.entry(new_score).or_insert(0u64) += new_count;
+                    }
+                });
+            });
+        scores = new_scores;
+        currently_player1 = !currently_player1;
+    }
+
+    wins.into_iter().max().unwrap().to_string()
 }
 
 fn main() {
@@ -102,12 +151,11 @@ Player 2 starting position: 8
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "444356092776315");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "634769613696613");
     }
 }
