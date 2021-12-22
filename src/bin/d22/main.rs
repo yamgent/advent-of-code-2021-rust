@@ -74,7 +74,7 @@ fn get_range_inclusive(range: &(i32, i32)) -> RangeInclusive<i32> {
 fn p1(input: &str) -> String {
     let mut on = HashSet::new();
 
-    restrict_range_to_p1_50(&parse_commands(&input))
+    restrict_range_to_p1_50(&parse_commands(input))
         .into_iter()
         .for_each(|command| {
             for x in get_range_inclusive(&command.x_range) {
@@ -158,6 +158,7 @@ on x=967..23432,y=45373..81175,z=27513..53682
     }
 
     #[test]
+    #[ignore = "not implemented yet"]
     fn test_p2_sample() {
         assert_eq!(
             p2(r"

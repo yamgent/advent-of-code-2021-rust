@@ -82,8 +82,8 @@ struct P2State {
 impl P2State {
     fn advance(&self, roll: i32, is_player_1_turn: bool) -> Self {
         let player_index = if is_player_1_turn { 0 } else { 1 };
-        let mut pos = self.pos.clone();
-        let mut scores = self.scores.clone();
+        let mut pos = self.pos;
+        let mut scores = self.scores;
 
         pos[player_index] = (pos[player_index] + roll) % 10;
         scores[player_index] += pos[player_index] + 1;
