@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::ops::RangeInclusive;
+use std::ops::{Index, RangeInclusive};
 
 use regex::Regex;
 
@@ -98,9 +98,264 @@ fn p1(input: &str) -> String {
     on.len().to_string()
 }
 
+#[derive(Debug, Clone, Copy)]
+struct Vec2 {
+    x: i64,
+    y: i64,
+}
+
+impl Vec2 {
+    fn new(x: i64, y: i64) -> Self {
+        Self { x, y }
+    }
+}
+
+impl Index<usize> for Vec2 {
+    type Output = i64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            _ => panic!("Index out of bounds: {}", index),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Rectangle {
+    min: Vec2,
+    max: Vec2,
+}
+
+impl Rectangle {
+    fn new(min: Vec2, max: Vec2) -> Self {
+        (0..2).for_each(|axis| {
+            if min[axis] > max[axis] {
+                panic!(
+                    "Illegal rectangle values for axis {}: min {:?}, max {:?}",
+                    axis, min, max
+                );
+            }
+        });
+
+        Self { min, max }
+    }
+
+    fn intersects(&self, other: &Self) -> bool {
+        !(0..2).all(|axis| self.max[axis] < other.min[axis] || other.max[axis] < self.min[axis])
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Vec3 {
+    x: i64,
+    y: i64,
+    z: i64,
+}
+
+impl Vec3 {
+    fn new(x: i64, y: i64, z: i64) -> Self {
+        Self { x, y, z }
+    }
+
+    fn new_from_str(x: &str, y: &str, z: &str) -> Self {
+        Self {
+            x: x.parse().unwrap(),
+            y: y.parse().unwrap(),
+            z: z.parse().unwrap(),
+        }
+    }
+
+    fn new_x(&self, x: i64) -> Self {
+        Vec3::new(x, self.y, self.z)
+    }
+
+    fn new_y(&self, y: i64) -> Self {
+        Vec3::new(self.x, y, self.z)
+    }
+
+    fn new_z(&self, z: i64) -> Self {
+        Vec3::new(self.x, self.y, z)
+    }
+
+    // swizzle to xy
+    fn xy(&self) -> Vec2 {
+        Vec2::new(self.x, self.y)
+    }
+
+    // swizzle to xz
+    fn xz(&self) -> Vec2 {
+        Vec2::new(self.x, self.z)
+    }
+
+    // swizzle to yz
+    fn yz(&self) -> Vec2 {
+        Vec2::new(self.y, self.z)
+    }
+}
+
+impl Index<usize> for Vec3 {
+    type Output = i64;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            _ => panic!("Index out of bounds: {}", index),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Cuboid {
+    min: Vec3,
+    max: Vec3,
+}
+
+impl Cuboid {
+    fn new(min: Vec3, max: Vec3) -> Self {
+        (0..3).for_each(|axis| {
+            if min[axis] > max[axis] {
+                panic!(
+                    "Illegal cuboid values for axis {}: min {:?}, max {:?}",
+                    axis, min, max
+                );
+            }
+        });
+
+        Self { min, max }
+    }
+
+    fn yz_plane(&self) -> Rectangle {
+        Rectangle::new(self.min.yz(), self.max.yz())
+    }
+
+    fn xz_plane(&self) -> Rectangle {
+        Rectangle::new(self.min.xz(), self.max.xz())
+    }
+
+    fn xy_plane(&self) -> Rectangle {
+        Rectangle::new(self.min.xy(), self.max.xy())
+    }
+
+    fn cut_yz_plane(&self, plane: &Rectangle, x: i64) -> Vec<Self> {
+        if self.yz_plane().intersects(plane) && ((self.min.x + 1)..(self.max.x)).contains(&x) {
+            vec![
+                Cuboid::new(self.min, self.max.new_x(x - 1)),
+                Cuboid::new(self.min.new_x(x), self.max),
+            ]
+        } else {
+            vec![*self]
+        }
+    }
+
+    fn cut_xz_plane(&self, plane: &Rectangle, y: i64) -> Vec<Self> {
+        if self.xz_plane().intersects(plane) && ((self.min.y + 1)..(self.max.y)).contains(&y) {
+            vec![
+                Cuboid::new(self.min, self.max.new_y(y - 1)),
+                Cuboid::new(self.min.new_y(y), self.max),
+            ]
+        } else {
+            vec![*self]
+        }
+    }
+
+    fn cut_xy_plane(&self, plane: &Rectangle, z: i64) -> Vec<Self> {
+        if self.xy_plane().intersects(plane) && ((self.min.z + 1)..(self.max.z)).contains(&z) {
+            vec![
+                Cuboid::new(self.min, self.max.new_z(z - 1)),
+                Cuboid::new(self.min.new_z(z), self.max),
+            ]
+        } else {
+            vec![*self]
+        }
+    }
+
+    fn contains(&self, other: &Self) -> bool {
+        (0..3).all(|axis| other.min[axis] >= self.min[axis] && other.max[axis] <= self.max[axis])
+    }
+
+    fn subtract(&self, other: &Self) -> Vec<Self> {
+        vec![*self]
+            .into_iter()
+            .flat_map(|part| part.cut_yz_plane(&other.yz_plane(), other.min.x))
+            .flat_map(|part| part.cut_yz_plane(&other.yz_plane(), other.max.x))
+            .flat_map(|part| part.cut_xz_plane(&other.xz_plane(), other.min.y))
+            .flat_map(|part| part.cut_xz_plane(&other.xz_plane(), other.max.y))
+            .flat_map(|part| part.cut_xy_plane(&other.xy_plane(), other.min.z))
+            .flat_map(|part| part.cut_xy_plane(&other.xy_plane(), other.max.z))
+            .filter(|part| !other.contains(part))
+            .collect()
+    }
+
+    fn get_total_points(&self) -> i64 {
+        (0..3)
+            .map(|axis| self.max[axis] - self.min[axis] + 1)
+            .product()
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum P2CommandType {
+    Off,
+    On,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct P2Command {
+    cmd_type: P2CommandType,
+    region: Cuboid,
+}
+
+impl P2Command {
+    fn parse_input(input: &str) -> Vec<Self> {
+        let re = Regex::new(
+            r"(on|off) x=(-*[\d]+)\.\.(-*[\d]+),y=(-*[\d]+)\.\.(-*[\d]+),z=(-*[\d]+)\.\.(-*[\d]+)",
+        )
+        .unwrap();
+
+        input
+            .trim()
+            .lines()
+            .map(|line| {
+                let cap = re.captures(line).unwrap();
+
+                P2Command {
+                    cmd_type: if &cap[1] == "on" {
+                        P2CommandType::On
+                    } else {
+                        P2CommandType::Off
+                    },
+                    region: Cuboid::new(
+                        Vec3::new_from_str(&cap[2], &cap[4], &cap[6]),
+                        Vec3::new_from_str(&cap[3], &cap[5], &cap[7]),
+                    ),
+                }
+            })
+            .collect()
+    }
+}
+
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    P2Command::parse_input(input)
+        .into_iter()
+        .fold(vec![], |acc: Vec<Cuboid>, command| {
+            let mut new_cuboids = acc
+                .into_iter()
+                .flat_map(|cuboid| cuboid.subtract(&command.region))
+                .collect::<Vec<_>>();
+
+            if let P2CommandType::On = command.cmd_type {
+                new_cuboids.push(command.region);
+            }
+
+            new_cuboids
+        })
+        .into_iter()
+        .fold(0, |acc, cuboid| acc + cuboid.get_total_points())
+        .to_string()
 }
 
 fn main() {
@@ -158,7 +413,7 @@ on x=967..23432,y=45373..81175,z=27513..53682
     }
 
     #[test]
-    #[ignore = "not implemented yet"]
+    #[ignore = "not yet implemented"]
     fn test_p2_sample() {
         assert_eq!(
             p2(r"
