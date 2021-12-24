@@ -18,6 +18,20 @@ fn p1_get_end_world() -> World {
     )
 }
 
+fn p2_get_end_world() -> World {
+    World::from_input(
+        r"
+#############
+#...........#
+###A#B#C#D###
+  #A#B#C#D#
+  #A#B#C#D#
+  #A#B#C#D#
+  #########
+",
+    )
+}
+
 fn get_move_cost(amp_type: &char, start: &(i32, i32), end: &(i32, i32)) -> usize {
     fn manhatten(start: &(i32, i32), end: &(i32, i32)) -> i32 {
         (end.0 - start.0).abs() + (end.1 - start.1).abs()
@@ -343,8 +357,14 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let mut input = input.trim().lines().collect::<Vec<_>>();
+    input.insert(3, "  #D#C#B#A#");
+    input.insert(4, "  #D#B#A#C#");
+    let input = input.join("\n");
+
+    dijkstra(World::from_input(&input), &p2_get_end_world())
+        .unwrap()
+        .to_string()
 }
 
 fn main() {
@@ -746,7 +766,7 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "44169");
     }
 
     #[test]
