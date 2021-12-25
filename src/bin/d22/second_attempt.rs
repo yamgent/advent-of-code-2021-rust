@@ -28,7 +28,7 @@ impl Index<usize> for Vec2 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Vec3 {
     x: i64,
     y: i64,
@@ -122,7 +122,7 @@ impl Rectangle {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Cuboid {
     min: Vec3,
     max: Vec3,
@@ -303,6 +303,40 @@ pub fn solve_second_attempt() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_cuboid_cut_yz_plane() {
+        assert_eq!(
+            Cuboid::new(Vec3::new(1, 1, 1), Vec3::new(1, 3, 3))
+                .cut_yz_plane(&Rectangle::new(Vec2::new(0, 0), Vec2::new(2, 2)), 1),
+            vec![Cuboid::new(Vec3::new(1, 1, 1), Vec3::new(1, 3, 3))]
+        );
+        assert_eq!(
+            Cuboid::new(Vec3::new(0, 0, 1), Vec3::new(2, 2, 1))
+                .cut_yz_plane(&Rectangle::new(Vec2::new(-1, 0), Vec2::new(1, 2)), 1),
+            vec![
+                Cuboid::new(Vec3::new(0, 0, 1), Vec3::new(0, 2, 1)),
+                Cuboid::new(Vec3::new(1, 0, 1), Vec3::new(2, 2, 1)),
+            ]
+        );
+        assert_eq!(
+            Cuboid::new(Vec3::new(-1, 1, 1), Vec3::new(1, 1, 3))
+                .cut_yz_plane(&Rectangle::new(Vec2::new(0, 0), Vec2::new(2, 2)), 0),
+            vec![
+                Cuboid::new(Vec3::new(-1, 1, 1), Vec3::new(-1, 1, 3)),
+                Cuboid::new(Vec3::new(0, 1, 1), Vec3::new(1, 1, 3)),
+            ]
+        );
+
+        assert_eq!(
+            Cuboid::new(Vec3::new(-1, 1, 1), Vec3::new(1, 1, 1))
+                .cut_yz_plane(&Rectangle::new(Vec2::new(0, 0), Vec2::new(2, 2)), 0),
+            vec![
+                Cuboid::new(Vec3::new(-1, 1, 1), Vec3::new(-1, 1, 1)),
+                Cuboid::new(Vec3::new(0, 1, 1), Vec3::new(1, 1, 1)),
+            ]
+        );
+    }
 
     #[test]
     fn test_p1_sample() {
