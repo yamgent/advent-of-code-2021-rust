@@ -237,7 +237,8 @@ impl PartialEq for View {
 }
 
 impl View {
-    fn beacons_eq(&self, other: &Self) -> bool {
+    #[allow(dead_code)] // reason = "is debug code"
+    fn debug_beacons_eq(&self, other: &Self) -> bool {
         if self.beacons.len() != other.beacons.len() {
             false
         } else {
@@ -353,6 +354,7 @@ impl View {
         views.remove(0)
     }
 
+    #[allow(dead_code)] // reason = "is debug code"
     fn debug_get_diff(&self, right: &Self) -> ViewDiff {
         let mut left_remaining: HashMap<Vec3, usize> = HashMap::new();
         let mut common = vec![];
@@ -787,27 +789,25 @@ mod tests {
     }
 
     #[test]
-    fn test_view_beacons_eq() {
-        assert!(View::new(vec![]).beacons_eq(&View::new(vec![])));
-        assert!(
-            View::new(vec![Vec3::new(1, 2, 3)]).beacons_eq(&View::new(vec![Vec3::new(1, 2, 3)]))
-        );
+    fn test_view_debug_beacons_eq() {
+        assert!(View::new(vec![]).debug_beacons_eq(&View::new(vec![])));
+        assert!(View::new(vec![Vec3::new(1, 2, 3)])
+            .debug_beacons_eq(&View::new(vec![Vec3::new(1, 2, 3)])));
         // order doesn't matter
         assert!(View::new(vec![Vec3::new(1, 2, 3), Vec3::new(4, 5, 6)])
-            .beacons_eq(&View::new(vec![Vec3::new(4, 5, 6), Vec3::new(1, 2, 3)])));
+            .debug_beacons_eq(&View::new(vec![Vec3::new(4, 5, 6), Vec3::new(1, 2, 3)])));
         // duplication doesn't matter
         assert!(View::new(vec![Vec3::new(1, 2, 3), Vec3::new(1, 2, 3)])
-            .beacons_eq(&View::new(vec![Vec3::new(1, 2, 3), Vec3::new(1, 2, 3)])));
-        assert!(
-            !View::new(vec![Vec3::new(1, 2, 3)]).beacons_eq(&View::new(vec![Vec3::new(0, 0, 0)]))
-        );
+            .debug_beacons_eq(&View::new(vec![Vec3::new(1, 2, 3), Vec3::new(1, 2, 3)])));
+        assert!(!View::new(vec![Vec3::new(1, 2, 3)])
+            .debug_beacons_eq(&View::new(vec![Vec3::new(0, 0, 0)])));
         // count does matter
         assert!(!View::new(vec![Vec3::new(1, 2, 3)])
-            .beacons_eq(&View::new(vec![Vec3::new(1, 2, 3), Vec3::new(1, 2, 3)])));
+            .debug_beacons_eq(&View::new(vec![Vec3::new(1, 2, 3), Vec3::new(1, 2, 3)])));
 
         // up till now, everything is the same as partialeq
         // but for this one below, different scanners DON't matter
-        assert!(View::new(vec![Vec3::new(1, 2, 3)]).beacons_eq(&View {
+        assert!(View::new(vec![Vec3::new(1, 2, 3)]).debug_beacons_eq(&View {
             beacons: vec![Vec3::new(1, 2, 3)],
             scanners: vec![Vec3::new(4, 5, 6)]
         }));
@@ -851,7 +851,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
 
         // equivalent but different order
         let views = View::parse_input(
@@ -870,7 +870,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
 
         // same deltas
         let views = View::parse_input(
@@ -889,7 +889,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
 
         // try different rotations
         let views = View::parse_input(
@@ -910,7 +910,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
 
         // remember to translate
         let views = View::parse_input(
@@ -931,7 +931,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
 
         // extras are not forgetten
         let views = View::parse_input(
@@ -954,7 +954,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&View::new(
+            .debug_beacons_eq(&View::new(
                 views[0]
                     .beacons
                     .iter()
@@ -968,7 +968,7 @@ mod tests {
         assert!(views[0]
             .combine_both_views(&views[1], 3)
             .unwrap()
-            .beacons_eq(&views[0]));
+            .debug_beacons_eq(&views[0]));
     }
 
     #[test]
@@ -1020,7 +1020,7 @@ mod tests {
 
         fn assert_beacons_eq(left: &View, right: &View) {
             assert!(
-                left.beacons_eq(right),
+                left.debug_beacons_eq(right),
                 "Difference:\n{:?}",
                 left.debug_get_diff(right)
             );
@@ -1079,7 +1079,7 @@ mod tests {
         );
 
         assert!(
-            View::combine_all_views(&views, 4).beacons_eq(&View::new(vec![
+            View::combine_all_views(&views, 4).debug_beacons_eq(&View::new(vec![
                 Vec3::new(0, 0, 0),
                 Vec3::new(1, 1, 0),
                 Vec3::new(15, 15, 0),
