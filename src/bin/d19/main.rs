@@ -88,6 +88,10 @@ impl Vec3 {
             index: 0,
         }
     }
+
+    fn manhatten_dist(&self, other: &Self) -> i32 {
+        (other.x - self.x).abs() + (other.y - self.y).abs() + (other.z - self.z).abs()
+    }
 }
 
 impl Add for Vec3 {
@@ -390,8 +394,14 @@ fn p1(input: &str) -> String {
 }
 
 fn p2(input: &str) -> String {
-    let _input = input.trim();
-    "".to_string()
+    let scanners = View::combine_all_views(&View::parse_input(input), 12).scanners;
+
+    scanners
+        .iter()
+        .map(|a| scanners.iter().map(|b| a.manhatten_dist(b)).max().unwrap())
+        .max()
+        .unwrap()
+        .to_string()
 }
 
 fn main() {
@@ -507,6 +517,18 @@ mod tests {
         assert_eq!(Vec3::new(0, 0, 1).rotate_z(90), Vec3::new(0, 0, 1));
         assert_eq!(Vec3::new(0, 0, 1).rotate_z(180), Vec3::new(0, 0, 1));
         assert_eq!(Vec3::new(0, 0, 1).rotate_z(270), Vec3::new(0, 0, 1));
+    }
+
+    #[test]
+    fn test_vec3_manhatten() {
+        assert_eq!(
+            Vec3::new(1, 3, 4).manhatten_dist(&Vec3::new(-1, -100, -1000)),
+            2 + 103 + 1004
+        );
+        assert_eq!(
+            Vec3::new(-1, -3, -4).manhatten_dist(&Vec3::new(1, 100, 1000)),
+            2 + 103 + 1004
+        );
     }
 
     #[test]
@@ -1161,12 +1183,12 @@ mod tests {
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "");
+        assert_eq!(p2(SAMPLE_INPUT), "3621");
     }
 
     #[test]
-    #[ignore = "not yet implemented"]
+    #[ignore = "expensive to run"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "");
+        assert_eq!(p2(ACTUAL_INPUT), "13327");
     }
 }
