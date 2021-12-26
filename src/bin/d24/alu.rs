@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Register {
     W,
@@ -6,10 +8,38 @@ enum Register {
     Z,
 }
 
+impl Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Register::W => "w",
+                Register::X => "x",
+                Register::Y => "y",
+                Register::Z => "z",
+            }
+        )
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Placeholder {
     Value(i64),
     Register(Register),
+}
+
+impl Display for Placeholder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Placeholder::Value(val) => val.to_string(),
+                Placeholder::Register(reg) => reg.to_string(),
+            }
+        )
+    }
 }
 
 impl Placeholder {
@@ -68,6 +98,25 @@ impl Instruction {
 
     fn parse_instructions(input: &str) -> Vec<Self> {
         input.trim().lines().map(Self::parse_instruction).collect()
+    }
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::Input(dest) => write!(f, "{} = input()", dest.to_string()),
+            Instruction::Add(dest, src) => write!(f, "{} += {}", dest.to_string(), src.to_string()),
+            Instruction::Mul(dest, src) => write!(f, "{} *= {}", dest.to_string(), src.to_string()),
+            Instruction::Div(dest, src) => write!(f, "{} /= {}", dest.to_string(), src.to_string()),
+            Instruction::Mod(dest, src) => write!(f, "{} %= {}", dest.to_string(), src.to_string()),
+            Instruction::Eql(dest, src) => write!(
+                f,
+                "{} = if {} == {} {{ 1 }} else {{ 0 }}",
+                dest.to_string(),
+                dest.to_string(),
+                src.to_string()
+            ),
+        }
     }
 }
 
@@ -133,7 +182,7 @@ impl Program {
 
                 if self.debug {
                     println!(
-                        "[{}] w:{}, x:{}, y:{}, z:{} ({:?})",
+                        "[{}] w:{}, x:{}, y:{}, z:{} ({})",
                         index + 1,
                         store.get(Register::W),
                         store.get(Register::X),
@@ -452,6 +501,40 @@ mod w 2
                 y: 0,
                 z: 0
             }
+        );
+    }
+
+    #[test]
+    fn test_display() {
+        assert_eq!(Register::W.to_string(), "w");
+        assert_eq!(Register::X.to_string(), "x");
+        assert_eq!(Register::Y.to_string(), "y");
+        assert_eq!(Register::Z.to_string(), "z");
+
+        assert_eq!(Placeholder::Value(-1).to_string(), "-1");
+        assert_eq!(Placeholder::Register(Register::X).to_string(), "x");
+
+        assert_eq!(
+            Instruction::parse_instructions(
+                r"
+inp w
+add x w
+mul y x
+div z y
+mod y z
+eql w 123
+"
+            )
+            .into_iter()
+            .map(|inst| inst.to_string())
+            .collect::<Vec<_>>()
+            .join("\n"),
+            r"w = input()
+x += w
+y *= x
+z /= y
+y %= z
+w = if w == 123 { 1 } else { 0 }"
         );
     }
 }
