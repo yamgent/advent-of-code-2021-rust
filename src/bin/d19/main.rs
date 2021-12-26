@@ -388,27 +388,30 @@ impl View {
     }
 }
 
-fn p1(input: &str) -> String {
-    View::combine_all_views(&View::parse_input(input), 12)
-        .beacons
-        .len()
-        .to_string()
-}
+fn solve(input: &str) -> (String, String) {
+    let final_view = View::combine_all_views(&View::parse_input(input), 12);
 
-fn p2(input: &str) -> String {
-    let scanners = View::combine_all_views(&View::parse_input(input), 12).scanners;
-
-    scanners
+    let max_dist = final_view
+        .scanners
         .iter()
-        .map(|a| scanners.iter().map(|b| a.manhatten_dist(b)).max().unwrap())
+        .map(|a| {
+            final_view
+                .scanners
+                .iter()
+                .map(|b| a.manhatten_dist(b))
+                .max()
+                .unwrap()
+        })
         .max()
-        .unwrap()
-        .to_string()
+        .unwrap();
+
+    (final_view.beacons.len().to_string(), max_dist.to_string())
 }
 
 fn main() {
-    println!("{}", p1(ACTUAL_INPUT));
-    println!("{}", p2(ACTUAL_INPUT));
+    let (p1, p2) = solve(ACTUAL_INPUT);
+    println!("{}", p1);
+    println!("{}", p2);
 }
 
 #[cfg(test)]
@@ -1172,23 +1175,23 @@ mod tests {
 
     #[test]
     fn test_p1_sample() {
-        assert_eq!(p1(SAMPLE_INPUT), "79");
+        assert_eq!(solve(SAMPLE_INPUT).0, "79");
     }
 
     #[test]
     #[ignore = "expensive to run"]
     fn test_p1_actual() {
-        assert_eq!(p1(ACTUAL_INPUT), "390");
+        assert_eq!(solve(ACTUAL_INPUT).0, "390");
     }
 
     #[test]
     fn test_p2_sample() {
-        assert_eq!(p2(SAMPLE_INPUT), "3621");
+        assert_eq!(solve(SAMPLE_INPUT).1, "3621");
     }
 
     #[test]
     #[ignore = "expensive to run"]
     fn test_p2_actual() {
-        assert_eq!(p2(ACTUAL_INPUT), "13327");
+        assert_eq!(solve(ACTUAL_INPUT).1, "13327");
     }
 }
