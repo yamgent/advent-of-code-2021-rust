@@ -1,3 +1,7 @@
+// code will crash even for p1 :(
+//
+// test cases in this file are valid though
+//
 use std::ops::Index;
 
 use regex::Regex;
